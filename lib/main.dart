@@ -32,7 +32,7 @@ class TravelMate extends StatelessWidget {
           },
         ),
       ),
-   home: const HotelDetails(),
+   home: const MainNavigation(),
     );
   }
 }

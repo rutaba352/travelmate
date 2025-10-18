@@ -1,3 +1,6 @@
+import 'package:travelmate/Views/HotelDetails.dart';
+import 'package:travelmate/Views/TouristSpotsList.dart';
+import 'package:travelmate/Views/Register.dart';
 import 'package:flutter/material.dart';
 import 'package:travelmate/Views/Explore.dart';
 import 'package:travelmate/Views/HomePage.dart';
@@ -29,7 +32,7 @@ class TravelMate extends StatelessWidget {
           },
         ),
       ),
-      home: const MainNavigation(),
+   home: const HotelDetails(),
     );
   }
 }

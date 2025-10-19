@@ -640,7 +640,7 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context) {
         buildMenuItem(
           'Settings',
           Icons.settings,
-          () => SnackbarHelper.showInfo(context, 'Opening Settings'),
+              () => Navigator.pushNamed(context, '/settings'),
         ),
         buildDivider(),
         buildMenuItem(

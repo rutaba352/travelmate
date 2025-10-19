@@ -5,6 +5,12 @@ import 'package:travelmate/Views/Saved.dart';
 import 'package:travelmate/Views/MyTrips.dart';
 import 'package:travelmate/Views/Profile.dart';
 
+import 'package:travelmate/Views/SplashScreen.dart';
+import 'package:travelmate/Views/LoginScreen.dart';
+import 'package:travelmate/Views/SearchResults.dart';
+import 'package:travelmate/Views/Settings.dart';
+
+
 /// AppNavigator class handles all navigation routes in the application
 class AppNavigator {
   // Private constructor
@@ -22,9 +28,14 @@ class AppNavigator {
   static const String notifications = '/notifications';
   static const String settings = '/settings';
 
+  // Add these route constants:
+  static const String splash = '/';
+  static const String login = '/login';
+
+
   /// Generate route based on route name and arguments
-  static Route<dynamic> generateRoute(RouteSettings settings) {
-    switch (settings.name) {
+  static Route<dynamic> generateRoute(RouteSettings routeSettings) {
+    switch (routeSettings.name) {
       case home:
         return _buildRoute(const HomePage());
 
@@ -41,19 +52,19 @@ class AppNavigator {
         return _buildRoute(const Profile());
 
       case tripDetails:
-        final args = settings.arguments as Map<String, dynamic>?;
+        final args = routeSettings.arguments as Map<String, dynamic>?;
         return _buildRoute(
           TripDetailsPage(tripData: args ?? {}),
         );
 
       case destinationDetails:
-        final args = settings.arguments as Map<String, dynamic>?;
+        final args = routeSettings.arguments as Map<String, dynamic>?;
         return _buildRoute(
           DestinationDetailsPage(destination: args ?? {}),
         );
 
       case searchResults:
-        final args = settings.arguments as Map<String, dynamic>?;
+        final args = routeSettings.arguments as Map<String, dynamic>?;
         return _buildRoute(
           SearchResultsPage(query: args?['query'] ?? ''),
         );
@@ -63,6 +74,26 @@ class AppNavigator {
 
       // case settings:
       //   return _buildRoute(const SettingsPage());
+
+    // Update generateRoute method - add these cases:
+      case splash:
+        return _buildRoute(const SplashScreen());
+
+      case login:
+        return _buildRoute(const LoginScreen());
+
+      case settings:
+        return _buildRoute(const Settings());
+
+      case searchResults:
+        final args = routeSettings.arguments as Map<String, dynamic>?;
+        return _buildRoute(
+          SearchResults(
+            query: args?['query'],
+            startLocation: args?['startLocation'],
+            destination: args?['destination'],
+          ),
+        );
 
       default:
         return _buildRoute(const HomePage());

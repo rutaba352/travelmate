@@ -3,6 +3,7 @@ import 'package:travelmate/Utilities/Widgets.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
+import 'package:travelmate/Views/SearchResults.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -24,6 +25,16 @@ class HomePageState extends State<HomePage> {
     startLocationController = TextEditingController();
     destinationController = TextEditingController();
     _loadInitialData();
+
+    // Reset loading when returning to this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          hasError = false;
+        });
+      }
+    });
   }
 
   @override
@@ -80,15 +91,23 @@ class HomePageState extends State<HomePage> {
       return;
     }
 
-    setState(() => isLoading = true);
-
-    Future.delayed(const Duration(seconds: 2), () {
+    // Navigate to SearchResults screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchResults(
+          startLocation: startLocationController.text,
+          destination: destinationController.text,
+          query: '${startLocationController.text} to ${destinationController.text}',
+        ),
+      ),
+    ).then((_) {
+      // Reset loading state when returning
       if (mounted) {
-        setState(() => isLoading = false);
-        SnackbarHelper.showSuccess(
-          context,
-          'Found routes from ${startLocationController.text} to ${destinationController.text}',
-        );
+        setState(() {
+          isLoading = false;
+          hasError = false;
+        });
       }
     });
   }

@@ -6,6 +6,12 @@ import 'package:travelmate/Views/Explore.dart';
 import 'package:travelmate/Views/HomePage.dart';
 import 'package:travelmate/Views/Profile.dart';
 import 'package:travelmate/Views/Saved.dart';
+import 'package:travelmate/Views/SplashScreen.dart';
+import 'package:travelmate/Views/LoginScreen.dart';
+import 'package:travelmate/Views/SearchResults.dart';
+import 'package:travelmate/Views/Settings.dart';
+
+import 'Utilities/AppNavigator (1).dart';
 
 void main() {
   runApp(const TravelMate());
@@ -32,7 +38,12 @@ class TravelMate extends StatelessWidget {
           },
         ),
       ),
-   home: const MainNavigation(),
+   // home: const MainNavigation(),
+
+      // Add these lines:
+      initialRoute: '/',
+      onGenerateRoute: AppNavigator.generateRoute,
+      home: const SplashScreen(),
     );
   }
 }

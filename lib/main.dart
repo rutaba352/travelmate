@@ -1,4 +1,7 @@
 import 'package:travelmate/Views/HotelDetails.dart';
+import 'package:travelmate/Views/HotelList.dart';
+import 'package:travelmate/Views/MapView.dart';
+import 'package:travelmate/Views/MyTrips.dart';
 import 'package:travelmate/Views/TouristSpotsList.dart';
 import 'package:travelmate/Views/Register.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +15,7 @@ import 'package:travelmate/Views/SearchResults.dart';
 import 'package:travelmate/Views/Settings.dart';
 
 import 'Utilities/AppNavigator (1).dart';
+import 'Views/RouteDetails.dart';
 
 void main() {
   runApp(const TravelMate());
@@ -43,7 +47,7 @@ class TravelMate extends StatelessWidget {
       // Add these lines:
       initialRoute: '/',
       onGenerateRoute: AppNavigator.generateRoute,
-      home: const SplashScreen(),
+      home: MyTrips(),
     );
   }
 }

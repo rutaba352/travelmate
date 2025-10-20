@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Utilities/SnackbarHelper.dart';
 
 class MapView extends StatefulWidget {
-  final String tripTitle;
-
-  const MapView({Key? key, required this.tripTitle}) : super(key: key);
+  const MapView({Key? key}) : super(key: key);
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -16,9 +15,9 @@ class _MapViewState extends State<MapView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Map - ${widget.tripTitle}',
-          style: const TextStyle(
+        title: const Text(
+          'Map - Paris Vacation',
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -29,7 +28,6 @@ class _MapViewState extends State<MapView> {
       ),
       body: Stack(
         children: [
-          // Map placeholder
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -47,8 +45,6 @@ class _MapViewState extends State<MapView> {
               painter: MapPainter(),
             ),
           ),
-
-          // View switcher
           Positioned(
             top: 16,
             left: 16,
@@ -69,24 +65,16 @@ class _MapViewState extends State<MapView> {
                       child: _buildViewButton('Hotels', 'hotels', Icons.hotel),
                     ),
                     Expanded(
-                      child: _buildViewButton(
-                        'Places',
-                        'places',
-                        Icons.place,
-                      ),
+                      child: _buildViewButton('Places', 'places', Icons.place),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-
-          // Location markers
           Positioned.fill(
             child: _buildMarkers(),
           ),
-
-          // Bottom info card
           Positioned(
             bottom: 16,
             left: 16,
@@ -102,7 +90,9 @@ class _MapViewState extends State<MapView> {
             heroTag: 'zoom_in',
             mini: true,
             backgroundColor: Colors.white,
-            onPressed: () {},
+            onPressed: () {
+              SnackbarHelper.showInfo(context, 'Zoom in');
+            },
             child: const Icon(Icons.add, color: Color(0xFF00897B)),
           ),
           const SizedBox(height: 8),
@@ -110,14 +100,18 @@ class _MapViewState extends State<MapView> {
             heroTag: 'zoom_out',
             mini: true,
             backgroundColor: Colors.white,
-            onPressed: () {},
+            onPressed: () {
+              SnackbarHelper.showInfo(context, 'Zoom out');
+            },
             child: const Icon(Icons.remove, color: Color(0xFF00897B)),
           ),
           const SizedBox(height: 8),
           FloatingActionButton(
             heroTag: 'my_location',
             backgroundColor: const Color(0xFF00897B),
-            onPressed: () {},
+            onPressed: () {
+              SnackbarHelper.showInfo(context, 'My location');
+            },
             child: const Icon(Icons.my_location, color: Colors.white),
           ),
         ],
@@ -221,13 +215,13 @@ class _MapViewState extends State<MapView> {
 
     switch (_selectedView) {
       case 'hotels':
-        title = 'Grand Plaza Hotel';
-        subtitle = 'Downtown District';
+        title = 'Grand Hotel Paris';
+        subtitle = 'Champs-Élysées';
         distance = '2.5 km away';
         break;
       case 'places':
-        title = 'Historical Museum';
-        subtitle = 'Must-visit attraction';
+        title = 'Eiffel Tower';
+        subtitle = 'Iconic landmark';
         distance = '1.8 km away';
         break;
       default:
@@ -302,7 +296,9 @@ class _MapViewState extends State<MapView> {
               ),
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () {
+                SnackbarHelper.showInfo(context, 'Get directions');
+              },
               icon: const Icon(
                 Icons.directions,
                 color: Color(0xFF00897B),
@@ -324,7 +320,6 @@ class MapPainter extends CustomPainter {
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
-    // Draw roads
     final path = Path();
     path.moveTo(100, 150);
     path.quadraticBezierTo(150, 200, 200, 250);
@@ -334,7 +329,6 @@ class MapPainter extends CustomPainter {
 
     canvas.drawPath(path, paint);
 
-    // Draw grid lines
     final gridPaint = Paint()
       ..color = Colors.grey.withOpacity(0.1)
       ..strokeWidth = 1;

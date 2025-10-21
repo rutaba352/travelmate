@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:travelmate/Utilities/SnackbarHelper.dart';
-import 'package:travelmate/Utilities/EmptyState.dart';
 
 class MyTrips extends StatefulWidget {
-  const MyTrips({Key? key}) : super(key: key);
+  const MyTrips({super.key});
 
   @override
   State<MyTrips> createState() => _MyTripsState();
 }
 
 class _MyTripsState extends State<MyTrips> {
+
   bool _isLoading = false;
+
   final List<Map<String, dynamic>> trips = [
     {
       'title': 'Paris Vacation',
@@ -47,18 +47,15 @@ class _MyTripsState extends State<MyTrips> {
   Future<void> _refreshTrips() async {
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      SnackbarHelper.showSuccess(context, 'Trips refreshed successfully!');
-    }
+    setState(() => _isLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Trips refreshed successfully!')),
+    );
   }
 
-  void _viewTripDetails(Map<String, dynamic> trip) {
-    SnackbarHelper.showInfo(context, 'Viewing ${trip['title']}');
-  }
-
-  void _editTrip(Map<String, dynamic> trip) {
-    SnackbarHelper.showInfo(context, 'Edit ${trip['title']}');
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _deleteTrip(Map<String, dynamic> trip) {
@@ -73,238 +70,14 @@ class _MyTripsState extends State<MyTrips> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               Navigator.pop(context);
-              SnackbarHelper.showSuccess(
-                context,
-                '${trip['title']} deleted',
-              );
+              _showMessage('${trip['title']} deleted');
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
-            ),
             child: const Text('Delete'),
           ),
         ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Trips'),
-        backgroundColor: const Color(0xFF00897B),
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshTrips,
-        color: const Color(0xFF00897B),
-        child: trips.isEmpty
-            ? EmptyState(
-                icon: Icons.luggage,
-                title: 'No Trips Yet',
-                message: 'Start planning your adventure by creating a new trip!',
-                buttonText: 'Create Trip',
-                onButtonPressed: () {
-                  SnackbarHelper.showInfo(context, 'Create new trip');
-                },
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: trips.length,
-                itemBuilder: (context, index) {
-                  final trip = trips[index];
-                  return GestureDetector(
-                    onTap: () => _viewTripDetails(trip),
-                    child: Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 150,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF00897B).withOpacity(0.7),
-                                  const Color(0xFF26A69A).withOpacity(0.7),
-                                ],
-                              ),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(15),
-                              ),
-                            ),
-                            child: Stack(
-                              children: [
-                                Center(
-                                  child: Text(
-                                    trip['image'],
-                                    style: const TextStyle(fontSize: 60),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(trip['status']),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      trip['status'],
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  trip['title'],
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF263238),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: 16,
-                                      color: Colors.grey[600],
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      trip['destination'],
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Duration',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '${trip['days']} days',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF00897B),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Activities',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '${trip['activities']} planned',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF00897B),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  '${trip['startDate']} - ${trip['endDate']}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: () => _editTrip(trip),
-                                      icon: const Icon(Icons.edit),
-                                      label: const Text('Edit'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor:
-                                            const Color(0xFF00897B),
-                                      ),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: () => _deleteTrip(trip),
-                                      icon: const Icon(Icons.delete),
-                                      label: const Text('Delete'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.red[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          SnackbarHelper.showInfo(context, 'Creating new trip...');
-        },
-        backgroundColor: const Color(0xFF00897B),
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -321,4 +94,205 @@ class _MyTripsState extends State<MyTrips> {
         return Colors.grey;
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Trips'),
+        backgroundColor: Colors.teal.shade600,
+      ),
+      body: RefreshIndicator(
+        onRefresh: _refreshTrips,
+        color: Colors.teal.shade600,
+        child: trips.isEmpty ? _buildEmptyState() : ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: trips.length,
+          itemBuilder: (context, index) {
+            final trip = trips[index];
+            return _buildTripCard(trip);
+          },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showMessage('Creating new trip...'),
+        backgroundColor: Colors.teal.shade600,
+        child: const Icon(Icons.add),
+      ),
+    );
   }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.luggage, size: 60, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'No Trips Yet',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Start planning your adventure by creating a new trip!',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _showMessage('Create new trip'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal.shade600,
+              ),
+              child: const Text('Create Trip'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTripCard(Map<String, dynamic> trip) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: () => _showMessage('Viewing ${trip['title']}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 150,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.teal.shade600,
+                    Colors.teal.shade400,
+                  ],
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Text(trip['image'], style: const TextStyle(fontSize: 60)),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(trip['status']),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        trip['status'],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trip['title'],
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        trip['destination'],
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      _buildInfoColumn('Duration', '${trip['days']} days'),
+                      _buildInfoColumn('Activities', '${trip['activities']} planned'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${trip['startDate']} - ${trip['endDate']}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _showMessage('Edit ${trip['title']}'),
+                        icon: const Icon(Icons.edit),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.teal.shade600,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _deleteTrip(trip),
+                        icon: const Icon(Icons.delete),
+                        label: const Text('Delete'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoColumn(String title, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color:Colors.teal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

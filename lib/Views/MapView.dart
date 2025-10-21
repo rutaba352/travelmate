@@ -1,9 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:travelmate/Utilities/SnackbarHelper.dart';
 
 class MapView extends StatefulWidget {
-  final String tripTitle;
-
-  const MapView({Key? key, required this.tripTitle}) : super(key: key);
+  const MapView({super.key});
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -11,25 +12,44 @@ class MapView extends StatefulWidget {
 
 class _MapViewState extends State<MapView> {
   String _selectedView = 'route';
+  List<Map<String, dynamic>> _markers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMapData();
+  }
+
+  Future<void> _loadMapData() async {
+    try {
+      final String response =
+      await rootBundle.loadString('assets/map_data.json');
+      final data = json.decode(response);
+      setState(() {
+        _markers = List<Map<String, dynamic>>.from(data['markers']);
+      });
+    } catch (e) {
+      SnackbarHelper.showError(context, 'Failed to load map data.');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Map - ${widget.tripTitle}',
-          style: const TextStyle(
+        title: const Text(
+          'Map - Paris Vacation',
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF00897B),
+        backgroundColor: Colors.teal.shade600,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
-          // Map placeholder
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -47,8 +67,6 @@ class _MapViewState extends State<MapView> {
               painter: MapPainter(),
             ),
           ),
-
-          // View switcher
           Positioned(
             top: 16,
             left: 16,
@@ -69,56 +87,21 @@ class _MapViewState extends State<MapView> {
                       child: _buildViewButton('Hotels', 'hotels', Icons.hotel),
                     ),
                     Expanded(
-                      child: _buildViewButton(
-                        'Places',
-                        'places',
-                        Icons.place,
-                      ),
+                      child: _buildViewButton('Places', 'places', Icons.place),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-
-          // Location markers
           Positioned.fill(
             child: _buildMarkers(),
           ),
-
-          // Bottom info card
           Positioned(
             bottom: 16,
             left: 16,
             right: 16,
             child: _buildInfoCard(),
-          ),
-        ],
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'zoom_in',
-            mini: true,
-            backgroundColor: Colors.white,
-            onPressed: () {},
-            child: const Icon(Icons.add, color: Color(0xFF00897B)),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: 'zoom_out',
-            mini: true,
-            backgroundColor: Colors.white,
-            onPressed: () {},
-            child: const Icon(Icons.remove, color: Color(0xFF00897B)),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: 'my_location',
-            backgroundColor: const Color(0xFF00897B),
-            onPressed: () {},
-            child: const Icon(Icons.my_location, color: Colors.white),
           ),
         ],
       ),
@@ -136,7 +119,7 @@ class _MapViewState extends State<MapView> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00897B) : Colors.transparent,
+          color: isSelected ? Colors.teal.shade600 : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
@@ -163,15 +146,38 @@ class _MapViewState extends State<MapView> {
   }
 
   Widget _buildMarkers() {
+    if (_markers.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Stack(
-      children: [
-        _buildMarker(100, 150, 'A', Colors.red),
-        _buildMarker(200, 250, 'B', Colors.blue),
-        _buildMarker(150, 350, 'C', Colors.green),
-        _buildMarker(280, 200, 'D', Colors.orange),
-        _buildMarker(180, 450, 'E', Colors.purple),
-      ],
+      children: _markers.map((marker) {
+        final color = _getColor(marker['color']);
+        return _buildMarker(
+          marker['left'].toDouble(),
+          marker['top'].toDouble(),
+          marker['label'],
+          color,
+        );
+      }).toList(),
     );
+  }
+
+  Color _getColor(String name) {
+    switch (name.toLowerCase()) {
+      case 'red':
+        return Colors.red;
+      case 'blue':
+        return Colors.blue;
+      case 'green':
+        return Colors.green;
+      case 'orange':
+        return Colors.orange;
+      case 'purple':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildMarker(double left, double top, String label, Color color) {
@@ -206,11 +212,7 @@ class _MapViewState extends State<MapView> {
               ),
             ),
           ),
-          Container(
-            width: 2,
-            height: 10,
-            color: color,
-          ),
+          Container(width: 2, height: 10, color: color),
         ],
       ),
     );
@@ -221,13 +223,13 @@ class _MapViewState extends State<MapView> {
 
     switch (_selectedView) {
       case 'hotels':
-        title = 'Grand Plaza Hotel';
-        subtitle = 'Downtown District';
+        title = 'Grand Hotel Paris';
+        subtitle = 'Champs-Élysées';
         distance = '2.5 km away';
         break;
       case 'places':
-        title = 'Historical Museum';
-        subtitle = 'Must-visit attraction';
+        title = 'Eiffel Tower';
+        subtitle = 'Iconic landmark';
         distance = '1.8 km away';
         break;
       default:
@@ -249,12 +251,12 @@ class _MapViewState extends State<MapView> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFF00897B).withOpacity(0.2),
+                color: Colors.teal.shade100,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.location_on,
-                color: Color(0xFF00897B),
+                color: Colors.teal.shade600,
                 size: 32,
               ),
             ),
@@ -282,17 +284,14 @@ class _MapViewState extends State<MapView> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.directions_car,
-                        size: 14,
-                        color: Color(0xFF00897B),
-                      ),
+                      Icon(Icons.directions_car,
+                          size: 14, color: Colors.teal.shade600),
                       const SizedBox(width: 4),
                       Text(
                         distance,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF00897B),
+                          color: Colors.teal.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -302,10 +301,12 @@ class _MapViewState extends State<MapView> {
               ),
             ),
             IconButton(
-              onPressed: () {},
-              icon: const Icon(
+              onPressed: () {
+                SnackbarHelper.showInfo(context, 'Get directions');
+              },
+              icon: Icon(
                 Icons.directions,
-                color: Color(0xFF00897B),
+                color: Colors.teal.shade600,
                 size: 28,
               ),
             ),
@@ -324,40 +325,29 @@ class MapPainter extends CustomPainter {
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
-    // Draw roads
     final path = Path();
     path.moveTo(100, 150);
     path.quadraticBezierTo(150, 200, 200, 250);
     path.lineTo(150, 350);
     path.quadraticBezierTo(200, 300, 280, 200);
     path.lineTo(180, 450);
-
     canvas.drawPath(path, paint);
 
-    // Draw grid lines
     final gridPaint = Paint()
       ..color = Colors.grey.withOpacity(0.1)
       ..strokeWidth = 1;
 
     for (var i = 0; i < size.width; i += 50) {
-      canvas.drawLine(
-        Offset(i.toDouble(), 0),
-        Offset(i.toDouble(), size.height),
-        gridPaint,
-      );
+      canvas.drawLine(Offset(i.toDouble(), 0),
+          Offset(i.toDouble(), size.height), gridPaint);
     }
 
     for (var i = 0; i < size.height; i += 50) {
       canvas.drawLine(
-        Offset(0, i.toDouble()),
-        Offset(size.width, i.toDouble()),
-        gridPaint,
-      );
+          Offset(0, i.toDouble()), Offset(size.width, i.toDouble()), gridPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

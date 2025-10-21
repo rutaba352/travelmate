@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Utilities/SnackbarHelper.dart';
 
 class HotelList extends StatelessWidget {
-  final String tripTitle;
-
-  const HotelList({Key? key, required this.tripTitle}) : super(key: key);
+  const HotelList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +15,7 @@ class HotelList extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF00897B),
+        backgroundColor: Colors.teal.shade600,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -24,44 +23,44 @@ class HotelList extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildHotelCard(
-            'Grand Plaza Hotel',
-            'Downtown District',
-            4.8,
-            '\$150',
-            ['Free WiFi', 'Pool', 'Restaurant', 'Gym'],
-          ),
+              'Grand Plaza Hotel',
+              'Downtown District',
+              4.8,
+              '\$150',
+              ['Free WiFi', 'Pool', 'Restaurant', 'Gym'],
+              context),
           const SizedBox(height: 16),
           _buildHotelCard(
-            'Ocean View Resort',
-            'Beachfront',
-            4.6,
-            '\$220',
-            ['Beach Access', 'Spa', 'Free Breakfast', 'Bar'],
-          ),
+              'Ocean View Resort',
+              'Beachfront',
+              4.6,
+              '\$220',
+              ['Beach Access', 'Spa', 'Free Breakfast', 'Bar'],
+              context),
           const SizedBox(height: 16),
           _buildHotelCard(
-            'City Center Inn',
-            'Business District',
-            4.5,
-            '\$120',
-            ['Free WiFi', 'Meeting Rooms', 'Parking', 'Airport Shuttle'],
-          ),
+              'City Center Inn',
+              'Business District',
+              4.5,
+              '\$120',
+              ['Free WiFi', 'Meeting Rooms', 'Parking', 'Airport Shuttle'],
+              context),
           const SizedBox(height: 16),
           _buildHotelCard(
-            'Luxury Suites',
-            'Historic Quarter',
-            4.9,
-            '\$350',
-            ['Concierge', 'Room Service', 'Spa', 'Fine Dining'],
-          ),
+              'Luxury Suites',
+              'Historic Quarter',
+              4.9,
+              '\$350',
+              ['Concierge', 'Room Service', 'Spa', 'Fine Dining'],
+              context),
           const SizedBox(height: 16),
           _buildHotelCard(
-            'Budget Comfort Lodge',
-            'Suburbs',
-            4.2,
-            '\$75',
-            ['Free WiFi', 'Free Parking', 'Pet Friendly', '24/7 Reception'],
-          ),
+              'Budget Comfort Lodge',
+              'Suburbs',
+              4.2,
+              '\$75',
+              ['Free WiFi', 'Free Parking', 'Pet Friendly', '24/7 Reception'],
+              context),
         ],
       ),
     );
@@ -73,6 +72,7 @@ class HotelList extends StatelessWidget {
       double rating,
       String price,
       List<String> amenities,
+      BuildContext context,
       ) {
     return Card(
       elevation: 4,
@@ -125,11 +125,7 @@ class HotelList extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 18,
-                      ),
+                      const Icon(Icons.star, color: Colors.amber, size: 18),
                       const SizedBox(width: 4),
                       Text(
                         rating.toString(),
@@ -144,6 +140,7 @@ class HotelList extends StatelessWidget {
               ),
             ],
           ),
+
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -164,33 +161,29 @@ class HotelList extends StatelessWidget {
                     ),
                     Text(
                       '$price/night',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF00897B),
+                        color: Colors.teal.shade600,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
+
                 Row(
                   children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
+                    const Icon(Icons.location_on,
+                        size: 16, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(
                       location,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
+
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -201,14 +194,14 @@ class HotelList extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00897B).withOpacity(0.1),
+                        color: Colors.teal.shade100.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         amenity,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF00897B),
+                          color: Colors.teal.shade700,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -216,11 +209,11 @@ class HotelList extends StatelessWidget {
                   }).toList(),
                 ),
                 const SizedBox(height: 12),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Show booking confirmation
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
@@ -238,15 +231,13 @@ class HotelList extends StatelessWidget {
                               ElevatedButton(
                                 onPressed: () {
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('$name booked successfully!'),
-                                      backgroundColor: const Color(0xFF00897B),
-                                    ),
+                                  SnackbarHelper.showSuccess(
+                                    context,
+                                    '$name booked successfully!',
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF00897B),
+                                  backgroundColor: Colors.teal.shade600,
                                 ),
                                 child: const Text(
                                   'Confirm',
@@ -259,7 +250,7 @@ class HotelList extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00897B),
+                      backgroundColor: Colors.teal.shade600,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

@@ -31,7 +31,7 @@ class TravelMate extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.teal,
-        primaryColor: const Color(0xFF00897B),
+        primaryColor: Colors.teal.shade600,
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'Poppins',
         useMaterial3: true,
@@ -42,18 +42,16 @@ class TravelMate extends StatelessWidget {
           },
         ),
       ),
-   // home: const MainNavigation(),
 
-      // Add these lines:
       initialRoute: '/',
       onGenerateRoute: AppNavigator.generateRoute,
-      home: MyTrips(),
+      home: MapView(),
     );
   }
 }
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({Key? key}) : super(key: key);
+  const MainNavigation({super.key});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:travelmate/Utilities/SnackbarHelper.dart';
 
 class RouteDetails extends StatefulWidget {
-  const RouteDetails({Key? key}) : super(key: key);
+  const RouteDetails({super.key});
 
   @override
   State<RouteDetails> createState() => _RouteDetailsState();
 }
 
 class _RouteDetailsState extends State<RouteDetails> {
+
   final List<Map<String, dynamic>> routeStops = [
     {
       'day': 1,
@@ -66,12 +66,18 @@ class _RouteDetailsState extends State<RouteDetails> {
     },
   ];
 
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   void _editStop(Map<String, dynamic> stop) {
-    SnackbarHelper.showInfo(context, 'Edit ${stop['title']}');
+    _showMessage('Edit ${stop['title']}');
   }
 
   void _deleteStop(Map<String, dynamic> stop) {
-    SnackbarHelper.showSuccess(context, '${stop['title']} removed');
+    _showMessage('${stop['title']} removed');
   }
 
   @override
@@ -79,20 +85,16 @@ class _RouteDetailsState extends State<RouteDetails> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Route Details'),
-        backgroundColor: const Color(0xFF00897B),
+        backgroundColor: Colors.teal.shade600,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () {
-              SnackbarHelper.showInfo(context, 'Share route');
-            },
+            onPressed: () => _showMessage('Share route'),
           ),
           IconButton(
             icon: const Icon(Icons.map),
-            onPressed: () {
-              SnackbarHelper.showInfo(context, 'View on map');
-            },
+            onPressed: () => _showMessage('View on map'),
           ),
         ],
       ),
@@ -100,15 +102,8 @@ class _RouteDetailsState extends State<RouteDetails> {
         children: [
           Container(
             width: double.infinity,
+            color: Colors.teal.shade600,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF00897B),
-                  const Color(0xFF26A69A),
-                ],
-              ),
-            ),
             child: Column(
               children: [
                 const Text(
@@ -120,11 +115,11 @@ class _RouteDetailsState extends State<RouteDetails> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   'Dec 15, 2024 - Dec 22, 2024',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white70,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -169,7 +164,7 @@ class _RouteDetailsState extends State<RouteDetails> {
                           Container(
                             width: 2,
                             height: 80,
-                            color: Colors.grey[300],
+                            color: Colors.grey.shade300,
                           ),
                       ],
                     ),
@@ -194,41 +189,25 @@ class _RouteDetailsState extends State<RouteDetails> {
                                       horizontal: 8,
                                       vertical: 4,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF00897B).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                                    color: Colors.teal.shade50,
                                     child: Text(
                                       'Day ${stop['day']}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF00897B),
+                                        color: Colors.teal.shade600,
                                       ),
                                     ),
                                   ),
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: Icon(
-                                          Icons.edit,
-                                          size: 18,
-                                          color: Colors.grey[600],
-                                        ),
+                                        icon: const Icon(Icons.edit, color: Colors.grey),
                                         onPressed: () => _editStop(stop),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
                                       ),
-                                      const SizedBox(width: 8),
                                       IconButton(
-                                        icon: Icon(
-                                          Icons.delete,
-                                          size: 18,
-                                          color: Colors.red[700],
-                                        ),
+                                        icon: const Icon(Icons.delete, color: Colors.red),
                                         onPressed: () => _deleteStop(stop),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
                                       ),
                                     ],
                                   ),
@@ -237,45 +216,34 @@ class _RouteDetailsState extends State<RouteDetails> {
                               const SizedBox(height: 12),
                               Text(
                                 stop['title'],
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF263238),
+                                  color: Colors.blueGrey.shade900,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                                  const Icon(Icons.access_time, size: 14, color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Text(
                                     stop['time'],
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                                  const Icon(Icons.location_on, size: 14, color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
                                       stop['location'],
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey[600],
+                                        color: Colors.grey,
                                       ),
                                     ),
                                   ),
@@ -286,7 +254,7 @@ class _RouteDetailsState extends State<RouteDetails> {
                                 stop['description'],
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.grey[700],
+                                  color: Colors.grey.shade700,
                                 ),
                               ),
                             ],
@@ -302,10 +270,8 @@ class _RouteDetailsState extends State<RouteDetails> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          SnackbarHelper.showInfo(context, 'Add new activity');
-        },
-        backgroundColor: const Color(0xFF00897B),
+        onPressed: () => _showMessage('Add new activity'),
+        backgroundColor: Colors.teal.shade600,
         child: const Icon(Icons.add),
       ),
     );
@@ -322,11 +288,12 @@ class _RouteDetailsState extends State<RouteDetails> {
             color: Colors.white,
           ),
         ),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white70,
           ),
         ),
       ],

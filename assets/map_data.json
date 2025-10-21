@@ -1,0 +1,9 @@
+{
+  "markers": [
+    { "label": "A", "left": 100, "top": 150, "color": "red" },
+    { "label": "B", "left": 200, "top": 250, "color": "blue" },
+    { "label": "C", "left": 150, "top": 350, "color": "green" },
+    { "label": "D", "left": 280, "top": 200, "color": "orange" },
+    { "label": "E", "left": 180, "top": 450, "color": "purple" }
+  ]
+}

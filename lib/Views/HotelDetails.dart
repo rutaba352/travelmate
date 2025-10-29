@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:travelmate/Views/MapView.dart';
 
 class HotelDetails extends StatefulWidget {
   final Map<String, dynamic>? hotelData;
@@ -116,8 +117,15 @@ class _HotelDetailsState extends State<HotelDetails>
   }
 
   void _getDirections() {
-    SnackbarHelper.showInfo(context, 'Opening directions...');
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MapView(
+        tripTitle: widget.hotelData?['name'] ?? 'Hotel Location',
+      ),
+    ),
+  );
+}
 
   Future<void> _selectCheckInDate() async {
     final DateTime? picked = await showDatePicker(

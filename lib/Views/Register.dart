@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
+import 'package:travelmate/Views/LoginScreen.dart';  
+import 'package:travelmate/main.dart';
 
 class Register extends StatefulWidget {
   const Register({Key? key}) : super(key: key);
@@ -101,13 +103,16 @@ class _RegisterState extends State<Register> {
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
-      setState(() => _isLoading = false);
-      SnackbarHelper.showSuccess(
-        context,
-        'Registration successful! Welcome to TravelMate',
-      );
-      Navigator.pop(context);
-    }
+  setState(() => _isLoading = false);
+  SnackbarHelper.showSuccess(
+    context,
+    'Registration successful! Welcome to TravelMate',
+  );
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (context) => const MainNavigation()),
+  );
+}
   }
 
   @override
@@ -343,11 +348,14 @@ class _RegisterState extends State<Register> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text(
-                              'Sign In',
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  },
+  child: const Text(
+    'Sign In',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF00897B),

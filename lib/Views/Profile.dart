@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/Widgets.dart';
+import 'package:travelmate/Views/LoginScreen.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);

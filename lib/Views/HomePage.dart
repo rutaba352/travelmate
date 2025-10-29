@@ -4,7 +4,9 @@ import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Views/SearchResults.dart';
-
+import 'package:travelmate/Views/SpotDetails.dart';
+import 'package:travelmate/Views/TouristSpotsList.dart';
+import 'package:travelmate/Views/HotelList.dart';
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 

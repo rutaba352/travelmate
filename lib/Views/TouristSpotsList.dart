@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
+import 'package:travelmate/Views/SpotDetails.dart';  // ← ADD THIS
+import 'package:travelmate/Views/MapView.dart';
 
 class TouristSpotsList extends StatefulWidget {
   final String? cityName;
@@ -182,10 +184,13 @@ class _TouristSpotsListState extends State<TouristSpotsList> {
   }
 
   void _viewSpotDetails(Map<String, dynamic> spot) {
-    SnackbarHelper.showInfo(context, 'Opening ${spot['name']} details');
-    // TODO: Navigate to SpotDetails screen
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => SpotDetails(spotData: spot)));
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SpotDetails(spotData: spot),
+    ),
+  );
+}
 
   void _showSortDialog() {
     showModalBottomSheet(
@@ -252,11 +257,18 @@ class _TouristSpotsListState extends State<TouristSpotsList> {
             onPressed: _showSortDialog,
           ),
           IconButton(
-            icon: const Icon(Icons.map_outlined),
-            onPressed: () {
-              SnackbarHelper.showInfo(context, 'Opening map view');
-            },
-          ),
+  icon: const Icon(Icons.map_outlined),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapView(
+          tripTitle: widget.cityName ?? 'Tourist Spots',
+        ),
+      ),
+    );
+  },
+),
         ],
       ),
       body: RefreshIndicator(

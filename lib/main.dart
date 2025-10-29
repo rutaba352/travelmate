@@ -45,7 +45,7 @@ class TravelMate extends StatelessWidget {
 
       initialRoute: '/',
       onGenerateRoute: AppNavigator.generateRoute,
-      home: MapView(),
+      home: const SplashScreen(),
     );
   }
 }

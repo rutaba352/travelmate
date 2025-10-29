@@ -42,14 +42,18 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     // Navigate to Login Screen after 3 seconds
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
-    });
+    _navigateToLogin();  // ← ADDED THIS
+  }
+
+  // ← ADDED THIS METHOD
+  void _navigateToLogin() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
   }
 
   @override

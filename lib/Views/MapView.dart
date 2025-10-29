@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
-
+  final String tripTitle;
+  
+  const MapView({super.key, required this.tripTitle});
   @override
   State<MapView> createState() => _MapViewState();
 }

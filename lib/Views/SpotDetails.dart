@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:travelmate/Views/MapView.dart';
 
 class SpotDetails extends StatefulWidget {
   final Map<String, dynamic>? spotData;
@@ -98,8 +99,15 @@ class _SpotDetailsState extends State<SpotDetails>
   }
 
   void _getDirections() {
-    SnackbarHelper.showInfo(context, 'Opening directions...');
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MapView(
+        tripTitle: widget.spotData?['name'] ?? 'Location',
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -638,11 +646,13 @@ class _SpotDetailsState extends State<SpotDetails>
               color: Color(0xFF00897B),
             ),
             onTap: () {
-              SnackbarHelper.showInfo(
-                context,
-                'Opening ${spot['name']}...',
-              );
-            },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SpotDetails(spotData: spot),
+    ),
+  );
+},
           ),
         );
       },

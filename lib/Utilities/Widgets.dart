@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:travelmate/Views/SpotDetails.dart';  // ← ADD THIS
+import 'package:travelmate/Views/HotelList.dart';  // ← ADD THIS
+import 'package:travelmate/Views/TouristSpotsList.dart';  // ← ADD THIS
+import 'package:travelmate/Views/MyTrips.dart';  // ← ADD THIS
+import 'package:travelmate/Views/Settings.dart';  // ← ADD THIS
+import 'package:travelmate/Views/LoginScreen.dart';  // ← ADD THIS
 
 // ===== Header =====
 Widget buildHeader() {

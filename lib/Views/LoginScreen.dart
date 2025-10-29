@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/main.dart';
+import 'package:travelmate/Views/Register.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -57,8 +58,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleSignUp() {
-    SnackbarHelper.showInfo(context, 'Sign up screen coming soon!');
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const Register()),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

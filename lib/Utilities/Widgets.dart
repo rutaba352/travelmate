@@ -274,7 +274,6 @@ Widget buildPopularDestinations() {
     ],
   );
 }
-
 // ===== Quick Actions =====
 Widget buildQuickActions(BuildContext context) {
   final actions = [
@@ -302,10 +301,18 @@ Widget buildQuickActions(BuildContext context) {
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                SnackbarHelper.showInfo(
-                  context,
-                  'Opening ${action['label']}...',
-                );
+                // Check if Hotels is clicked
+                if (action['label'] == 'Hotels') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => HotelList()),
+                  );
+                } else {
+                  SnackbarHelper.showInfo(
+                    context,
+                    'Opening ${action['label']}...',
+                  );
+                }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),

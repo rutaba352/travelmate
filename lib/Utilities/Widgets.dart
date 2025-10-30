@@ -6,7 +6,8 @@ import 'package:travelmate/Views/TouristSpotsList.dart';  // ← ADD THIS
 import 'package:travelmate/Views/MyTrips.dart';  // ← ADD THIS
 import 'package:travelmate/Views/Settings.dart';  // ← ADD THIS
 import 'package:travelmate/Views/LoginScreen.dart';  // ← ADD THIS
-
+import 'package:travelmate/Views/Activities.dart';
+import 'package:travelmate/Views/Dining.dart';
 // ===== Header =====
 Widget buildHeader() {
   return Row(
@@ -302,11 +303,43 @@ Widget buildQuickActions(BuildContext context) {
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                SnackbarHelper.showInfo(
-                  context,
-                  'Opening ${action['label']}...',
-                );
-              },
+  if (action['label'] == 'Hotels') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const HotelList(),
+      ),
+    );
+  } else if (action['label'] == 'Tours') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TouristSpotsList(cityName: 'Popular Tours'),
+      ),
+    );
+  } else if (action['label'] == 'Activities') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const Activities(),
+      ),
+    );
+  } 
+  else if (action['label'] == 'Dining') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const Dining(),
+    ),
+  );
+}
+else {
+    SnackbarHelper.showInfo(
+      context,
+      'Opening ${action['label']}...',
+    );
+  }
+},
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.symmetric(horizontal: 5),

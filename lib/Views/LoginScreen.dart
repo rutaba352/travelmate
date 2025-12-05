@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Services/Auth/AuthException.dart';
+import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/main.dart';
 import 'package:travelmate/Views/Register.dart';
@@ -18,6 +20,14 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _rememberMe = false;
 
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = AuthService.firebase();
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -29,18 +39,62 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      if (mounted) {
-        setState(() => _isLoading = false);
-        SnackbarHelper.showSuccess(context, 'Login successful!');
-
-        // Navigate to home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
+      try {
+        await _authService.logIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+          SnackbarHelper.showSuccess(context, 'Login successful!');
+
+          // Navigate to home
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigation()),
+          );
+        }
+      } on UserNotFoundAuthException {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'User not found. Please check your email.',
+          );
+        }
+      } on WrongPasswordAuthException {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'Wrong password. Please try again.',
+          );
+        }
+      } on InvalidEmailAuthException {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'Invalid email format.',
+          );
+        }
+      } on GenericAuthException {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'Authentication error. Please try again.',
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'An unexpected error occurred: ${e.toString()}',
+          );
+        }
       }
     }
   }
@@ -53,16 +107,49 @@ class _LoginScreenState extends State<LoginScreen> {
     SnackbarHelper.showInfo(context, 'Facebook login coming soon!');
   }
 
-  void _handleForgotPassword() {
-    SnackbarHelper.showInfo(context, 'Password reset link sent to email!');
+  Future<void> _handleForgotPassword() async {
+    if (_emailController.text.trim().isEmpty) {
+      SnackbarHelper.showWarning(
+        context,
+        'Please enter your email address first',
+      );
+      return;
+    }
+
+    try {
+      await _authService.sendPasswordReset(
+        toEmail: _emailController.text.trim(),
+      );
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context,
+          'Password reset link sent to your email!',
+        );
+      }
+    } on InvalidEmailAuthException {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Invalid email format.');
+      }
+    } on UserNotFoundAuthException {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'No user found with this email.');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Failed to send reset email. Please try again.',
+        );
+      }
+    }
   }
 
   void _handleSignUp() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const Register()),
-  );
-}
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const Register()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -259,21 +346,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
                           : const Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                              'Login',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 30),

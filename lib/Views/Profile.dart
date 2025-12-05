@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Services/Auth/AuthException.dart';
+import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/Widgets.dart';
 import 'package:travelmate/Views/LoginScreen.dart';
@@ -26,9 +28,12 @@ class _ProfileState extends State<Profile>
   final TextEditingController _bioController =
       TextEditingController(text: 'Adventure seeker | World explorer 🌍');
 
+  late final AuthService _authService;
+
   @override
   void initState() {
     super.initState();
+    _authService = AuthService.firebase();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -37,6 +42,16 @@ class _ProfileState extends State<Profile>
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _animationController.forward();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final user = _authService.currentUser;
+    if (user != null) {
+      setState(() {
+        _emailController.text = user.email;
+      });
+    }
   }
 
   @override
@@ -84,19 +99,45 @@ class _ProfileState extends State<Profile>
             child: const Text('CANCEL'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              SnackbarHelper.showSuccess(context, 'Logged out successfully');
+              await _handleLogout();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red[700],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('LOGOUT'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await _authService.logOut();
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'Logged out successfully');
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } on UserNotLoggedInAuthException {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'No user is currently logged in');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Failed to logout. Please try again.',
+        );
+      }
+    }
   }
 
   @override

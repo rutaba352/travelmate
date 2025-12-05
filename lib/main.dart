@@ -1,23 +1,20 @@
-import 'package:travelmate/Views/HotelDetails.dart';
-import 'package:travelmate/Views/HotelList.dart';
-import 'package:travelmate/Views/MapView.dart';
-import 'package:travelmate/Views/MyTrips.dart';
-import 'package:travelmate/Views/TouristSpotsList.dart';
-import 'package:travelmate/Views/Register.dart';
 import 'package:flutter/material.dart';
+import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Views/Explore.dart';
 import 'package:travelmate/Views/HomePage.dart';
 import 'package:travelmate/Views/Profile.dart';
 import 'package:travelmate/Views/Saved.dart';
 import 'package:travelmate/Views/SplashScreen.dart';
-import 'package:travelmate/Views/LoginScreen.dart';
-import 'package:travelmate/Views/SearchResults.dart';
-import 'package:travelmate/Views/Settings.dart';
+import 'package:travelmate/Utilities/AppNavigator (1).dart';
 
-import 'Utilities/AppNavigator (1).dart';
-import 'Views/RouteDetails.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  final authService = AuthService.firebase();
+  await authService.initialize();
+  
   runApp(const TravelMate());
 }
 
@@ -42,7 +39,6 @@ class TravelMate extends StatelessWidget {
           },
         ),
       ),
-
       initialRoute: '/',
       onGenerateRoute: AppNavigator.generateRoute,
       home: const SplashScreen(),

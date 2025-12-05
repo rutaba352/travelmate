@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Services/Auth/AuthException.dart';
+import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
-import 'package:travelmate/Views/LoginScreen.dart';  
+import 'package:travelmate/Views/LoginScreen.dart';
 import 'package:travelmate/main.dart';
 
 class Register extends StatefulWidget {
@@ -17,12 +19,21 @@ class _RegisterState extends State<Register> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-  
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = AuthService.firebase();
+  }
 
   @override
   void dispose() {
@@ -100,19 +111,64 @@ class _RegisterState extends State<Register> {
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      await _authService.createUser(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    if (mounted) {
-  setState(() => _isLoading = false);
-  SnackbarHelper.showSuccess(
-    context,
-    'Registration successful! Welcome to TravelMate',
-  );
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (context) => const MainNavigation()),
-  );
-}
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarHelper.showSuccess(
+          context,
+          'Registration successful! Welcome to TravelMate',
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+        );
+      }
+    } on WeakPasswordAuthException {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Password is too weak. Please use a stronger password.',
+        );
+      }
+    } on EmailAlreadyInUseAuthException {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'This email is already registered. Please login instead.',
+        );
+      }
+    } on InvalidEmailAuthException {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Invalid email format.',
+        );
+      }
+    } on GenericAuthException {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Registration failed. Please try again.',
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'An unexpected error occurred: ${e.toString()}',
+        );
+      }
+    }
   }
 
   @override
@@ -217,7 +273,8 @@ class _RegisterState extends State<Register> {
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
                             });
                           },
                         ),
@@ -293,6 +350,7 @@ class _RegisterState extends State<Register> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
+                                    color: Colors.white,
                                   ),
                                 ),
                         ),
@@ -348,14 +406,15 @@ class _RegisterState extends State<Register> {
                             ),
                           ),
                           GestureDetector(
-  onTap: () {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  },
-  child: const Text(
-    'Sign In',
+                            onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const LoginScreen()),
+                              );
+                            },
+                            child: const Text(
+                              'Sign In',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF00897B),
@@ -372,7 +431,8 @@ class _RegisterState extends State<Register> {
               ),
             ),
           ),
-          if (_isLoading) const FullScreenLoader(message: 'Creating account...'),
+          if (_isLoading)
+            const FullScreenLoader(message: 'Creating account...'),
         ],
       ),
     );
@@ -418,7 +478,8 @@ class _RegisterState extends State<Register> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF00897B), width: 2),
+              borderSide:
+                  const BorderSide(color: Color(0xFF00897B), width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

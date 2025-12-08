@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:travelmate/Utilities/Widgets.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
@@ -7,6 +9,8 @@ import 'package:travelmate/Views/SearchResults.dart';
 import 'package:travelmate/Views/SpotDetails.dart';
 import 'package:travelmate/Views/TouristSpotsList.dart';
 import 'package:travelmate/Views/HotelList.dart';
+
+import '../Services/location/location_storage.dart';
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -74,6 +78,31 @@ class HomePageState extends State<HomePage> {
         );
       }
     }
+
+    int attempts = 0;
+    while (LocationStorage.userLocation == null && attempts < 5) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      attempts++;
+    }
+
+    String defaultCity = "Lahore"; // Default fallback
+
+    if (LocationStorage.userLocation != null) {
+      try {
+        String address = await _getAddressFromLatLng(LocationStorage.userLocation!);
+        if (mounted && address.isNotEmpty) {
+          startLocationController.text = address;
+        } else {
+          startLocationController.text = defaultCity; // Fallback to Lahore
+        }
+      } catch (e) {
+        print("Failed to get address: $e");
+        startLocationController.text = defaultCity; // Fallback to Lahore
+      }
+    } else {
+      // No location stored at all
+      startLocationController.text = defaultCity;
+    }
   }
 
   Future<void> _refreshData() async {
@@ -112,6 +141,19 @@ class HomePageState extends State<HomePage> {
         });
       }
     });
+  }
+
+  Future<String> _getAddressFromLatLng(LatLng latLng) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          latLng.latitude,
+          latLng.longitude
+      );
+      Placemark place = placemarks.first;
+      return "${place.locality}, ${place.country}";
+    } catch (e) {
+      return "${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}";
+    }
   }
 
   @override

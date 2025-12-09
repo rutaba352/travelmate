@@ -15,6 +15,8 @@ abstract class AuthProvider {
     required String password,
   });
   
+  Future<AuthUser> signInWithGoogle();  // Added
+  
   Future<void> logOut();
   
   Future<void> sendEmailVerification();

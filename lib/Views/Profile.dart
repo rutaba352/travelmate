@@ -19,16 +19,15 @@ class _ProfileState extends State<Profile>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'John Anderson');
-  final TextEditingController _emailController =
-      TextEditingController(text: 'john.anderson@email.com');
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController =
       TextEditingController(text: '+1 234 567 8900');
   final TextEditingController _bioController =
       TextEditingController(text: 'Adventure seeker | World explorer 🌍');
 
   late final AuthService _authService;
+  String? _photoURL;
 
   @override
   void initState() {
@@ -50,6 +49,18 @@ class _ProfileState extends State<Profile>
     if (user != null) {
       setState(() {
         _emailController.text = user.email;
+        _photoURL = user.photoURL;
+        
+        // Set display name if available (from Google Sign-In)
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          _nameController.text = user.displayName!;
+        } else {
+          // Extract name from email as fallback
+          final emailName = user.email.split('@')[0];
+          _nameController.text = emailName.replaceAll('.', ' ').split(' ')
+              .map((word) => word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1))
+              .join(' ');
+        }
       });
     }
   }
@@ -81,6 +92,7 @@ class _ProfileState extends State<Profile>
 
   Future<void> _refreshProfile() async {
     await Future.delayed(const Duration(seconds: 1));
+    _loadUserData(); // Reload user data
     if (mounted) {
       SnackbarHelper.showSuccess(context, 'Profile refreshed');
     }
@@ -148,10 +160,71 @@ class _ProfileState extends State<Profile>
         color: const Color(0xFF00897B),
         child: CustomScrollView(
           slivers: [
-            buildAppBar(_isEditing, () {
-              setState(() => _isEditing = true);
-              SnackbarHelper.showInfo(context, 'Edit mode enabled');
-            }),
+            // Custom AppBar with profile picture
+            SliverAppBar(
+              expandedHeight: 200,
+              pinned: true,
+              backgroundColor: const Color(0xFF00897B),
+              flexibleSpace: FlexibleSpaceBar(
+                centerTitle: true,
+                title: Text(
+                  _nameController.text,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF00897B),
+                        const Color(0xFF00897B).withOpacity(0.8),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 40),
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.white,
+                          backgroundImage: _photoURL != null
+                              ? NetworkImage(_photoURL!)
+                              : null,
+                          child: _photoURL == null
+                              ? Text(
+                                  _nameController.text.isNotEmpty
+                                      ? _nameController.text[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF00897B),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                if (!_isEditing)
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    onPressed: () {
+                      setState(() => _isEditing = true);
+                      SnackbarHelper.showInfo(context, 'Edit mode enabled');
+                    },
+                  ),
+              ],
+            ),
             SliverToBoxAdapter(
               child: FadeTransition(
                 opacity: _fadeAnimation,

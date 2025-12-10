@@ -99,12 +99,47 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleGoogleLogin() {
-    SnackbarHelper.showInfo(context, 'Google login coming soon!');
-  }
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
 
-  void _handleFacebookLogin() {
-    SnackbarHelper.showInfo(context, 'Facebook login coming soon!');
+    try {
+      await _authService.signInWithGoogle();
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarHelper.showSuccess(context, 'Signed in with Google successfully!');
+
+        // Navigate to home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+        );
+      }
+    } on EmailAlreadyInUseAuthException {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'An account already exists with this email.',
+        );
+      }
+    } on GenericAuthException {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'Google sign-in failed. Please try again.',
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        SnackbarHelper.showError(
+          context,
+          'An unexpected error occurred: ${e.toString()}',
+        );
+      }
+    }
   }
 
   Future<void> _handleForgotPassword() async {
@@ -164,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  // Logo Section
+                  // Logo Section - FIXED
                   Center(
                     child: Container(
                       padding: const EdgeInsets.all(20),
@@ -385,57 +420,51 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // Social Login Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _handleGoogleLogin,
-                          icon: const Text(
-                            '🔍',
-                            style: TextStyle(fontSize: 20),
+                  // Google Login Button - FIXED
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _handleGoogleLogin,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'G',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4285F4),
+                                ),
+                              ),
+                            ),
                           ),
-                          label: const Text(
-                            'Google',
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Continue with Google',
                             style: TextStyle(
                               color: Color(0xFF263238),
                               fontWeight: FontWeight.w600,
+                              fontSize: 15,
                             ),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(color: Colors.grey[300]!),
-                          ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _handleFacebookLogin,
-                          icon: const Text(
-                            '📘',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          label: const Text(
-                            'Facebook',
-                            style: TextStyle(
-                              color: Color(0xFF263238),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(color: Colors.grey[300]!),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 30),
 

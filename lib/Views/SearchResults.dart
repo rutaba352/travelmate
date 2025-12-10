@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Services/API/AmadeusApiService.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
+import 'package:travelmate/Utilities/LoadingIndicator.dart';
 
 class SearchResults extends StatefulWidget {
   final String? query;
@@ -8,11 +10,11 @@ class SearchResults extends StatefulWidget {
   final String? destination;
 
   const SearchResults({
-    Key? key,
+    super.key,
     this.query,
     this.startLocation,
     this.destination,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchResults> createState() => _SearchResultsState();
@@ -20,9 +22,25 @@ class SearchResults extends StatefulWidget {
 
 class _SearchResultsState extends State<SearchResults> {
   late TextEditingController _searchController;
+  final AmadeusApiService _apiService = AmadeusApiService();
+
   String selectedFilter = 'All';
   String selectedSort = 'Recommended';
   bool _isLoading = false;
+  bool _hasError = false;
+  String _errorMessage = '';
+
+  // API Results
+  List<Map<String, dynamic>> _flights = [];
+  List<Map<String, dynamic>> _hotels = [];
+  List<Map<String, dynamic>> _activities = [];
+  List<Map<String, dynamic>> _packages = [];
+
+  // Location codes
+  String? _originCode;
+  String? _destinationCode;
+  double? _destLatitude;
+  double? _destLongitude;
 
   final List<String> filters = [
     'All',
@@ -40,74 +58,11 @@ class _SearchResultsState extends State<SearchResults> {
     'Duration'
   ];
 
-  final List<Map<String, dynamic>> searchResults = [
-    {
-      'type': 'Flight',
-      'title': 'Direct Flight to Paris',
-      'airline': 'Air France',
-      'departure': '10:30 AM',
-      'arrival': '2:45 PM',
-      'duration': '4h 15m',
-      'price': '\$450',
-      'rating': '4.8',
-      'icon': '✈️',
-    },
-    {
-      'type': 'Hotel',
-      'title': 'The Ritz Paris',
-      'location': 'Paris, France',
-      'stars': 5,
-      'amenities': 'Free WiFi, Pool, Spa',
-      'price': '\$350/night',
-      'rating': '4.9',
-      'icon': '🏨',
-    },
-    {
-      'type': 'Package',
-      'title': 'Paris Romantic Getaway',
-      'duration': '5 Days, 4 Nights',
-      'includes': 'Flight + Hotel + Tours',
-      'price': '\$1,200',
-      'rating': '4.7',
-      'icon': '📦',
-    },
-    {
-      'type': 'Activity',
-      'title': 'Eiffel Tower Skip-the-Line',
-      'duration': '2 hours',
-      'availability': 'Daily',
-      'price': '\$45',
-      'rating': '4.8',
-      'icon': '🗼',
-    },
-    {
-      'type': 'Flight',
-      'title': 'Economy Flight to Paris',
-      'airline': 'Emirates',
-      'departure': '6:00 PM',
-      'arrival': '10:30 PM',
-      'duration': '4h 30m',
-      'price': '\$380',
-      'rating': '4.6',
-      'icon': '✈️',
-    },
-    {
-      'type': 'Hotel',
-      'title': 'Hotel Le Bristol',
-      'location': 'Paris, France',
-      'stars': 5,
-      'amenities': 'Restaurant, Bar, Gym',
-      'price': '\$420/night',
-      'rating': '4.8',
-      'icon': '🏨',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.query ?? '');
-    _loadResults();
+    _performSearch();
   }
 
   @override
@@ -116,36 +71,184 @@ class _SearchResultsState extends State<SearchResults> {
     super.dispose();
   }
 
-  Future<void> _loadResults() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
+  /// Main search function - calls all APIs
+  Future<void> _performSearch() async {
+    if (widget.startLocation == null || widget.destination == null) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Please provide start location and destination';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
+
+    try {
+      // Step 1: Get location codes
+      await _getLocationCodes();
+
+      if (_originCode == null || _destinationCode == null) {
+        throw Exception('Could not find location codes');
+      }
+
+      // Step 2: Search all types (parallel for speed)
+      await Future.wait([
+        _searchFlights(),
+        _searchHotels(),
+        _searchActivities(),
+      ]);
+
+      // Step 3: Create packages from flight + hotel combinations
+      _createPackages();
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (_flights.isEmpty && _hotels.isEmpty && _activities.isEmpty) {
+        SnackbarHelper.showWarning(
+          context,
+          'No results found. Try different locations or dates.',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Search failed: ${e.toString()}';
+      });
+      SnackbarHelper.showError(
+        context,
+        'Failed to fetch results. Please check your API credentials.',
+      );
     }
   }
 
-  Future<void> _refreshResults() async {
-    await _loadResults();
-    if (mounted) {
-      SnackbarHelper.showSuccess(context, 'Results refreshed!');
+  /// Get IATA codes for cities
+  Future<void> _getLocationCodes() async {
+    try {
+      // Search origin
+      final originResults = await _apiService.searchLocations(widget.startLocation!);
+      if (originResults.isNotEmpty) {
+        _originCode = originResults[0]['code'];
+      }
+
+      // Search destination
+      final destResults = await _apiService.searchLocations(widget.destination!);
+      if (destResults.isNotEmpty) {
+        _destinationCode = destResults[0]['code'];
+        // Get coordinates for activities search
+        _destLatitude = 48.8566; // Default to Paris coordinates
+        _destLongitude = 2.3522; // You can enhance this by getting real coords
+      }
+    } catch (e) {
+      throw Exception('Failed to get location codes: $e');
     }
   }
 
+  /// Search Flights
+  Future<void> _searchFlights() async {
+    try {
+      final flights = await _apiService.searchFlights(
+        originCode: _originCode!,
+        destinationCode: _destinationCode!,
+        departureDate: _getSearchDate(),
+        adults: 1,
+      );
+      setState(() {
+        _flights = flights;
+      });
+    } catch (e) {
+      print('Flight search error: $e');
+      // Don't throw - let other searches continue
+    }
+  }
+
+  /// Search Hotels
+  Future<void> _searchHotels() async {
+    try {
+      final hotels = await _apiService.searchHotels(
+        cityCode: _destinationCode!,
+        checkInDate: _getSearchDate(),
+        checkOutDate: _getCheckoutDate(),
+        adults: 1,
+      );
+      setState(() {
+        _hotels = hotels;
+      });
+    } catch (e) {
+      print('Hotel search error: $e');
+    }
+  }
+
+  /// Search Activities
+  Future<void> _searchActivities() async {
+    if (_destLatitude == null || _destLongitude == null) return;
+
+    try {
+      final activities = await _apiService.searchActivities(
+        latitude: _destLatitude!,
+        longitude: _destLongitude!,
+        radius: 10,
+      );
+      setState(() {
+        _activities = activities;
+      });
+    } catch (e) {
+      print('Activities search error: $e');
+    }
+  }
+
+  /// Create package combinations
+  void _createPackages() {
+    _packages.clear();
+    if (_flights.isEmpty || _hotels.isEmpty) return;
+
+    // Create top 3 package combinations
+    for (int i = 0; i < _flights.length && i < 3; i++) {
+      for (int j = 0; j < _hotels.length && j < 1; j++) {
+        _apiService.createPackage(
+          flight: _flights[i],
+          hotel: _hotels[j],
+        ).then((package) {
+          setState(() {
+            _packages.add(package);
+          });
+        });
+      }
+    }
+  }
+
+  /// Helper: Get search date (tomorrow)
+  String _getSearchDate() {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    return '${tomorrow.year}-${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Helper: Get checkout date (5 days from now)
+  String _getCheckoutDate() {
+    final checkout = DateTime.now().add(const Duration(days: 6));
+    return '${checkout.year}-${checkout.month.toString().padLeft(2, '0')}-${checkout.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Get filtered results based on selected filter
   List<Map<String, dynamic>> get filteredResults {
-    if (selectedFilter == 'All') {
-      return searchResults;
+    switch (selectedFilter) {
+      case 'Flights':
+        return _flights;
+      case 'Hotels':
+        return _hotels;
+      case 'Activities':
+        return _activities;
+      case 'Packages':
+        return _packages;
+      default: // 'All'
+        return [..._flights, ..._hotels, ..._activities, ..._packages];
     }
-    return searchResults
-        .where((result) => result['type'] == selectedFilter.replaceAll('s', ''))
-        .toList();
-  }
-
-  void _bookItem(Map<String, dynamic> item) {
-    SnackbarHelper.showInfo(context, 'Booking ${item['title']}...');
-  }
-
-  void _saveItem(Map<String, dynamic> item) {
-    SnackbarHelper.showSuccess(context, '${item['title']} saved!');
   }
 
   void _showSortOptions() {
@@ -203,147 +306,306 @@ class _SearchResultsState extends State<SearchResults> {
             onPressed: _showSortOptions,
             tooltip: 'Sort',
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _performSearch,
+            tooltip: 'Refresh',
+          ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshResults,
-        color: const Color(0xFF00897B),
-        child: Column(
-          children: [
-            // Search Bar
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: const Color(0xFF00897B),
-              child: TextField(
-                controller: _searchController,
-                onSubmitted: (value) => _refreshResults(),
-                decoration: InputDecoration(
-                  hintText: 'Search destinations...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {});
-                    },
-                  )
-                      : null,
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-            ),
-
-            // Filter Chips
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: filters.length,
-                  itemBuilder: (context, index) {
-                    final filter = filters[index];
-                    final isSelected = filter == selectedFilter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(filter),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            selectedFilter = filter;
-                          });
-                        },
-                        backgroundColor: Colors.grey[100],
-                        selectedColor:
-                        const Color(0xFF00897B).withOpacity(0.2),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? const Color(0xFF00897B)
-                              : Colors.grey[700],
-                          fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                        side: BorderSide(
-                          color: isSelected
-                              ? const Color(0xFF00897B)
-                              : Colors.grey[300]!,
+      body: Column(
+        children: [
+          // Search Info Bar
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0xFF00897B).withOpacity(0.1),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${widget.startLocation} → ${widget.destination}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF263238),
                         ),
                       ),
-                    );
-                  },
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tomorrow • 1 Adult',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-
-            // Results Count
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${filteredResults.length} results found',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
+                if (_originCode != null && _destinationCode != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00897B),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$_originCode → $_destinationCode',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  Text(
-                    'Sort: $selectedSort',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF00897B),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
-            const SizedBox(height: 12),
+          ),
 
-            // Results List
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                child: CircularProgressIndicator(
-                  valueColor:
-                  AlwaysStoppedAnimation<Color>(Color(0xFF00897B)),
-                ),
-              )
-                  : filteredResults.isEmpty
-                  ? EmptyState(
-                icon: Icons.search_off,
-                title: 'No Results Found',
-                message:
-                'Try adjusting your filters or search query',
-                buttonText: 'Clear Filters',
-                onButtonPressed: () {
-                  setState(() {
-                    selectedFilter = 'All';
-                    _searchController.clear();
-                  });
-                },
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filteredResults.length,
+          // Filter Chips
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SizedBox(
+              height: 40,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: filters.length,
                 itemBuilder: (context, index) {
-                  final result = filteredResults[index];
-                  return _buildResultCard(result);
+                  final filter = filters[index];
+                  final isSelected = filter == selectedFilter;
+
+                  // Count results for each filter
+                  int count = 0;
+                  switch (filter) {
+                    case 'Flights':
+                      count = _flights.length;
+                      break;
+                    case 'Hotels':
+                      count = _hotels.length;
+                      break;
+                    case 'Activities':
+                      count = _activities.length;
+                      break;
+                    case 'Packages':
+                      count = _packages.length;
+                      break;
+                    case 'All':
+                      count = _flights.length + _hotels.length +
+                          _activities.length + _packages.length;
+                      break;
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text('$filter ($count)'),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedFilter = filter;
+                        });
+                      },
+                      backgroundColor: Colors.grey[100],
+                      selectedColor:
+                      const Color(0xFF00897B).withOpacity(0.2),
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFF00897B)
+                            : Colors.grey[700],
+                        fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFF00897B)
+                            : Colors.grey[300]!,
+                      ),
+                    ),
+                  );
                 },
               ),
+            ),
+          ),
+
+          // Results Count
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${filteredResults.length} results found',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'Sort: $selectedSort',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF00897B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Results List
+          Expanded(
+            child: _buildResultsBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsBody() {
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00897B)),
+            ),
+            SizedBox(height: 16),
+            Text('Searching flights, hotels & activities...'),
+          ],
+        ),
+      );
+    }
+
+    if (_hasError) {
+      return EmptyState(
+        icon: Icons.error_outline,
+        title: 'Search Error',
+        message: _errorMessage,
+        buttonText: 'Try Again',
+        onButtonPressed: _performSearch,
+      );
+    }
+
+    if (filteredResults.isEmpty) {
+      return EmptyState(
+        icon: Icons.search_off,
+        title: 'No Results Found',
+        message: 'Try different locations or adjust your filters',
+        buttonText: 'New Search',
+        onButtonPressed: () => Navigator.pop(context),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: filteredResults.length,
+      itemBuilder: (context, index) {
+        final result = filteredResults[index];
+
+        // Determine result type
+        if (result.containsKey('airline')) {
+          return _buildFlightCard(result);
+        } else if (result.containsKey('roomType')) {
+          return _buildHotelCard(result);
+        } else if (result.containsKey('category') && result.containsKey('description')) {
+          return _buildActivityCard(result);
+        } else if (result.containsKey('type') && result['type'] == 'Package') {
+          return _buildPackageCard(result);
+        }
+
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildFlightCard(Map<String, dynamic> flight) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00897B).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.flight, color: Color(0xFF00897B)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${flight['airline']} ${flight['flightNumber']}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${flight['stops']} stop${flight['stops'] != 1 ? 's' : ''}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${flight['price']['currency']} ${flight['price']['total']}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF00897B),
+                      ),
+                    ),
+                    Text(
+                      '${flight['seats']} seats left',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFlightTimeInfo(
+                    flight['departure']['airport'],
+                    _formatTime(flight['departure']['time']),
+                  ),
+                ),
+                const Icon(Icons.arrow_forward, size: 20, color: Colors.grey),
+                Expanded(
+                  child: _buildFlightTimeInfo(
+                    flight['arrival']['airport'],
+                    _formatTime(flight['arrival']['time']),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Duration: ${flight['duration']}',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -351,238 +613,332 @@ class _SearchResultsState extends State<SearchResults> {
     );
   }
 
-  Widget _buildResultCard(Map<String, dynamic> result) {
-    return GestureDetector(
-        onTap: () => _bookItem(result),
-        child: Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+  Widget _buildFlightTimeInfo(String airport, String time) {
+    return Column(
+      children: [
+        Text(
+          airport,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF263238),
           ),
-          elevation: 2,
-          child: Column(
+        ),
+        const SizedBox(height: 4),
+        Text(
+          time,
+          style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHotelCard(Map<String, dynamic> hotel) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                // Header with icon and type
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF00897B).withOpacity(0.7),
-                        const Color(0xFF26A69A).withOpacity(0.7),
-                      ],
-                    ),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(15),
-                    ),
+                    color: const Color(0xFF00897B).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: const Icon(Icons.hotel, color: Color(0xFF00897B)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        result['icon'],
-                        style: const TextStyle(fontSize: 40),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                result['type'],
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF00897B),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              result['title'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                        hotel['name'],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.white,
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.favorite_border,
-                            size: 16,
-                          ),
-                          color: Colors.red,
-                          padding: EdgeInsets.zero,
-                          onPressed: () => _saveItem(result),
-                        ),
+                      Text(
+                        '${hotel['rating']} ⭐ • ${hotel['roomType']}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 ),
-
-                // Details Section
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                      children: [
-                  if (result['type'] == 'Flight') ...[
-                  _buildDetailRow(
-                  Icons.flight_takeoff,
-                  'Departure',
-                  result['departure'],
-                ),
-                _buildDetailRow(
-                  Icons.flight_land,
-                  'Arrival',
-                  result['arrival'],
-                ),
-                _buildDetailRow(
-                  Icons.access_time,
-                  'Duration',
-                  result['duration'],
-                ),
               ],
-              if (result['type'] == 'Hotel') ...[
-          _buildDetailRow(
-          Icons.location_on,
-          'Location',
-          result['location'],
-        ),
-        _buildDetailRow(
-            Icons.hotel,
-            'Amenities',
-          result['amenities'],
-        ),
-              ],
-                        if (result['type'] == 'Package') ...[
-                          _buildDetailRow(
-                            Icons.calendar_today,
-                            'Duration',
-                            result['duration'],
-                          ),
-                          _buildDetailRow(
-                            Icons.check_circle,
-                            'Includes',
-                            result['includes'],
-                          ),
-                        ],
-                        if (result['type'] == 'Activity') ...[
-                          _buildDetailRow(
-                            Icons.access_time,
-                            'Duration',
-                            result['duration'],
-                          ),
-                          _buildDetailRow(
-                            Icons.event_available,
-                            'Availability',
-                            result['availability'],
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 18,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  result['rating'],
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              result['price'],
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF00897B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => _bookItem(result),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00897B),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Book Now',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${hotel['price']['currency']} ${hotel['price']['perNight']}/night',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF00897B),
+                      ),
+                    ),
+                    Text(
+                      'Total: ${hotel['price']['currency']} ${hotel['price']['total']}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                ElevatedButton(
+                  onPressed: () => SnackbarHelper.showInfo(context, 'Booking hotel...'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00897B),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
+                  child: const Text('Book'),
                 ),
               ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: Colors.grey[600],
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[600],
+  Widget _buildActivityCard(Map<String, dynamic> activity) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00897B).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.local_activity, color: Color(0xFF00897B)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        activity['name'],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        activity['category'],
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF263238),
-              ),
+            const SizedBox(height: 12),
+            Text(
+              activity['description'],
+              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${activity['price']['currency']} ${activity['price']['amount']}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00897B),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => SnackbarHelper.showInfo(context, 'Booking activity...'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00897B),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Book'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildPackageCard(Map<String, dynamic> package) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 3,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF00897B).withOpacity(0.05),
+              Colors.white,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.local_offer, size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          'SAVE ${package['savings']}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'PACKAGE DEAL',
+                    style: TextStyle(
+                      color: Color(0xFF00897B),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '✈️ Flight + 🏨 Hotel',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                package['duration'],
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Regular Price',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      Text(
+                        '${package['price']['currency']} ${package['price']['total'].toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Package Price',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      Text(
+                        '${package['price']['currency']} ${package['price']['finalPrice'].toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF00897B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => SnackbarHelper.showSuccess(
+                    context,
+                    'Booking package...',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00897B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Book Package',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(String isoTime) {
+    final dateTime = DateTime.parse(isoTime);
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }

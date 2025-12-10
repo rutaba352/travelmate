@@ -46,23 +46,15 @@ class _RegisterState extends State<Register> {
   }
 
   String? _validateName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your name';
-    }
-    if (value.length < 3) {
-      return 'Name must be at least 3 characters';
-    }
+    if (value == null || value.isEmpty) return 'Please enter your name';
+    if (value.length < 3) return 'Name must be at least 3 characters';
     return null;
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
+    if (value == null || value.isEmpty) return 'Please enter your email';
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
+    if (!emailRegex.hasMatch(value)) return 'Please enter a valid email';
     return null;
   }
 
@@ -70,19 +62,13 @@ class _RegisterState extends State<Register> {
     if (value == null || value.isEmpty) {
       return 'Please enter your phone number';
     }
-    if (value.length < 10) {
-      return 'Phone number must be at least 10 digits';
-    }
+    if (value.length < 10) return 'Phone number must be at least 10 digits';
     return null;
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a password';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
+    if (value == null || value.isEmpty) return 'Please enter a password';
+    if (value.length < 6) return 'Password must be at least 6 characters';
     return null;
   }
 
@@ -97,15 +83,11 @@ class _RegisterState extends State<Register> {
   }
 
   Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (!_agreeToTerms) {
       SnackbarHelper.showWarning(
-        context,
-        'Please agree to Terms & Conditions',
-      );
+          context, 'Please agree to Terms & Conditions');
       return;
     }
 
@@ -120,9 +102,7 @@ class _RegisterState extends State<Register> {
       if (mounted) {
         setState(() => _isLoading = false);
         SnackbarHelper.showSuccess(
-          context,
-          'Registration successful! Welcome to TravelMate',
-        );
+            context, 'Registration successful! Welcome to TravelMate');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),
@@ -130,44 +110,53 @@ class _RegisterState extends State<Register> {
       }
     } on WeakPasswordAuthException {
       setState(() => _isLoading = false);
+      SnackbarHelper.showError(
+          context, 'Password is too weak. Please use a stronger password.');
+    } on EmailAlreadyInUseAuthException {
+      setState(() => _isLoading = false);
+      SnackbarHelper.showError(
+          context, 'This email is already registered. Please login instead.');
+    } on InvalidEmailAuthException {
+      setState(() => _isLoading = false);
+      SnackbarHelper.showError(context, 'Invalid email format.');
+    } on GenericAuthException {
+      setState(() => _isLoading = false);
+      SnackbarHelper.showError(
+          context, 'Registration failed. Please try again.');
+    } catch (e) {
+      setState(() => _isLoading = false);
+      SnackbarHelper.showError(
+          context, 'An unexpected error occurred: ${e.toString()}');
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.signInWithGoogle();
+
       if (mounted) {
-        SnackbarHelper.showError(
+        setState(() => _isLoading = false);
+        SnackbarHelper.showSuccess(
+            context, 'Signed up with Google successfully!');
+        Navigator.pushReplacement(
           context,
-          'Password is too weak. Please use a stronger password.',
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
       }
     } on EmailAlreadyInUseAuthException {
       setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'This email is already registered. Please login instead.',
-        );
-      }
-    } on InvalidEmailAuthException {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'Invalid email format.',
-        );
-      }
+      SnackbarHelper.showError(
+          context, 'An account already exists with this email.');
     } on GenericAuthException {
       setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'Registration failed. Please try again.',
-        );
-      }
+      SnackbarHelper.showError(
+          context, 'Google sign-up failed. Please try again.');
     } catch (e) {
       setState(() => _isLoading = false);
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'An unexpected error occurred: ${e.toString()}',
-        );
-      }
+      SnackbarHelper.showError(
+          context, 'An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -207,13 +196,13 @@ class _RegisterState extends State<Register> {
                       const SizedBox(height: 8),
                       Text(
                         'Sign up to start your journey',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
+                        style:
+                            TextStyle(fontSize: 16, color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
+
+                      // Name
                       _buildTextField(
                         controller: _nameController,
                         label: 'Full Name',
@@ -221,6 +210,8 @@ class _RegisterState extends State<Register> {
                         validator: _validateName,
                       ),
                       const SizedBox(height: 20),
+
+                      // Email
                       _buildTextField(
                         controller: _emailController,
                         label: 'Email',
@@ -229,6 +220,8 @@ class _RegisterState extends State<Register> {
                         validator: _validateEmail,
                       ),
                       const SizedBox(height: 20),
+
+                      // Phone
                       _buildTextField(
                         controller: _phoneController,
                         label: 'Phone Number',
@@ -237,6 +230,8 @@ class _RegisterState extends State<Register> {
                         validator: _validatePhone,
                       ),
                       const SizedBox(height: 20),
+
+                      // Password
                       _buildTextField(
                         controller: _passwordController,
                         label: 'Password',
@@ -251,13 +246,14 @@ class _RegisterState extends State<Register> {
                             color: Colors.grey[600],
                           ),
                           onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
+                            setState(
+                                () => _obscurePassword = !_obscurePassword);
                           },
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Confirm Password
                       _buildTextField(
                         controller: _confirmPasswordController,
                         label: 'Confirm Password',
@@ -272,40 +268,33 @@ class _RegisterState extends State<Register> {
                             color: Colors.grey[600],
                           ),
                           onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
+                            setState(() => _obscureConfirmPassword =
+                                !_obscureConfirmPassword);
                           },
                         ),
                       ),
+
                       const SizedBox(height: 24),
+
+                      // Terms Checkbox
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Checkbox(
                             value: _agreeToTerms,
-                            onChanged: (value) {
-                              setState(() {
-                                _agreeToTerms = value ?? false;
-                              });
-                            },
+                            onChanged: (value) => setState(
+                                () => _agreeToTerms = value ?? false),
                             activeColor: const Color(0xFF00897B),
                           ),
                           Flexible(
                             child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _agreeToTerms = !_agreeToTerms;
-                                });
-                              },
+                              onTap: () => setState(
+                                  () => _agreeToTerms = !_agreeToTerms),
                               child: RichText(
                                 textAlign: TextAlign.center,
                                 text: TextSpan(
                                   style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[700],
-                                  ),
+                                      fontSize: 14, color: Colors.grey[700]),
                                   children: const [
                                     TextSpan(text: 'I agree to the '),
                                     TextSpan(
@@ -330,14 +319,18 @@ class _RegisterState extends State<Register> {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 30),
+
+                      // Create Account Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleRegister,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF00897B),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -355,12 +348,18 @@ class _RegisterState extends State<Register> {
                                 ),
                         ),
                       ),
+
                       const SizedBox(height: 20),
+
+                      // OR Divider
                       Row(
                         children: [
-                          Expanded(child: Divider(color: Colors.grey[300])),
+                          Expanded(
+                              child:
+                                  Divider(color: Colors.grey[300])),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               'OR',
                               style: TextStyle(
@@ -369,48 +368,88 @@ class _RegisterState extends State<Register> {
                               ),
                             ),
                           ),
-                          Expanded(child: Divider(color: Colors.grey[300])),
+                          Expanded(
+                              child:
+                                  Divider(color: Colors.grey[300])),
                         ],
                       ),
+
                       const SizedBox(height: 20),
-                      _buildSocialButton(
-                        icon: Icons.g_mobiledata,
-                        label: 'Continue with Google',
-                        onPressed: () {
-                          SnackbarHelper.showInfo(
-                            context,
-                            'Google sign-in coming soon',
-                          );
-                        },
+
+                      // ---------------------------
+                      // NEW GOOGLE BUTTON (FIXED)
+                      // ---------------------------
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed:
+                              _isLoading ? null : _handleGoogleSignUp,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side:
+                                BorderSide(color: Colors.grey[300]!),
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(2),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'G',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF4285F4),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  color: Color(0xFF263238),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _buildSocialButton(
-                        icon: Icons.facebook,
-                        label: 'Continue with Facebook',
-                        onPressed: () {
-                          SnackbarHelper.showInfo(
-                            context,
-                            'Facebook sign-in coming soon',
-                          );
-                        },
-                      ),
+
                       const SizedBox(height: 30),
+
+                      // Already have an account?
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             'Already have an account? ',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                            ),
+                                fontSize: 14,
+                                color: Colors.grey[700]),
                           ),
                           GestureDetector(
                             onTap: () {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => const LoginScreen()),
+                                  builder: (context) =>
+                                      const LoginScreen(),
+                                ),
                               );
                             },
                             child: const Text(
@@ -424,6 +463,7 @@ class _RegisterState extends State<Register> {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -431,6 +471,8 @@ class _RegisterState extends State<Register> {
               ),
             ),
           ),
+
+          // Loading overlay
           if (_isLoading)
             const FullScreenLoader(message: 'Creating account...'),
         ],
@@ -438,6 +480,9 @@ class _RegisterState extends State<Register> {
     );
   }
 
+  // ---------------------------------------
+  // RE-USABLE TEXT FIELD WIDGET
+  // ---------------------------------------
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -470,7 +515,6 @@ class _RegisterState extends State<Register> {
             suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[300]!),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -478,8 +522,10 @@ class _RegisterState extends State<Register> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Color(0xFF00897B), width: 2),
+              borderSide: const BorderSide(
+                color: Color(0xFF00897B),
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -491,36 +537,11 @@ class _RegisterState extends State<Register> {
             ),
             filled: true,
             fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSocialButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 24),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          side: BorderSide(color: Colors.grey[300]!),
-          foregroundColor: const Color(0xFF263238),
-        ),
-      ),
     );
   }
 }

@@ -314,7 +314,7 @@ Widget buildQuickActions(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const TouristSpotsList(cityName: 'Popular Tours'),
+        builder: (context) => const TouristSpotsList(),
       ),
     );
   } else if (action['label'] == 'Activities') {

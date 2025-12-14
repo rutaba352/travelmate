@@ -32,3 +32,4 @@ flutter:
   assets:
     - assets/map_data.json
     - assets/images/
+    - assets/images/tourist_spots/

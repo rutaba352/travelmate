@@ -307,7 +307,7 @@ Widget buildQuickActions(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const HotelList(),
+        builder: (context) => HotelList(),
       ),
     );
   } else if (action['label'] == 'Tours') {

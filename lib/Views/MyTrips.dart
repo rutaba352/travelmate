@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:travelmate/Services/SavedItemsService.dart';
+import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:travelmate/Utilities/EmptyState.dart';
+import 'package:travelmate/Views/MainNavigation.dart';
 
 class MyTrips extends StatefulWidget {
   const MyTrips({super.key});
@@ -8,81 +12,88 @@ class MyTrips extends StatefulWidget {
 }
 
 class _MyTripsState extends State<MyTrips> {
+  final SavedItemsService _service = SavedItemsService();
 
-  bool _isLoading = false;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Trips'),
+        backgroundColor: const Color(0xFF00897B),
+      ),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _service.getBookingsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-  final List<Map<String, dynamic>> trips = [
-    {
-      'title': 'Paris Vacation',
-      'destination': 'Paris, France',
-      'startDate': 'Dec 15, 2024',
-      'endDate': 'Dec 22, 2024',
-      'days': 7,
-      'image': '🗼',
-      'status': 'Upcoming',
-      'activities': 8,
-    },
-    {
-      'title': 'Tokyo Adventure',
-      'destination': 'Tokyo, Japan',
-      'startDate': 'Jan 5, 2025',
-      'endDate': 'Jan 18, 2025',
-      'days': 13,
-      'image': '🗾',
-      'status': 'Planning',
-      'activities': 12,
-    },
-    {
-      'title': 'Dubai Luxury',
-      'destination': 'Dubai, UAE',
-      'startDate': 'Nov 1, 2024',
-      'endDate': 'Nov 5, 2024',
-      'days': 4,
-      'image': '🏙️',
-      'status': 'Completed',
-      'activities': 6,
-    },
-  ];
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-  Future<void> _refreshTrips() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _isLoading = false);
+          final trips = snapshot.data ?? [];
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Trips refreshed successfully!')),
+          if (trips.isEmpty) {
+            return EmptyState(
+              icon: Icons.luggage,
+              title: 'No Trips Yet',
+              message:
+                  'Start planning your adventure by booking flights or hotels!',
+              buttonText: 'Plan a Trip',
+              onButtonPressed: () {
+                // Return to main screen then switch to Explore
+                Navigator.popUntil(context, (route) => route.isFirst);
+                MainNavigation.switchTab(context, 1); // Switch to Explore
+              },
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: trips.length,
+            itemBuilder: (context, index) {
+              final trip = trips[index];
+              return _buildTripCard(trip);
+            },
+          );
+        },
+      ),
     );
-  }
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _deleteTrip(Map<String, dynamic> trip) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Trip'),
-        content: Text('Are you sure you want to delete "${trip['title']}"?'),
+        title: const Text('Cancel Trip'),
+        content: Text('Are you sure you want to cancel "${trip['title']}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Keep'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _showMessage('${trip['title']} deleted');
+              final success = await _service.removeBooking(trip['itemId']);
+              if (success) {
+                if (context.mounted)
+                  SnackbarHelper.showSuccess(context, 'Trip cancelled');
+              } else {
+                if (context.mounted)
+                  SnackbarHelper.showError(context, 'Failed to cancel trip');
+              }
             },
-            child: const Text('Delete'),
+            child: const Text('Cancel Trip'),
           ),
         ],
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String? status) {
     switch (status) {
       case 'Upcoming':
         return Colors.blue;
@@ -91,68 +102,8 @@ class _MyTripsState extends State<MyTrips> {
       case 'Completed':
         return Colors.green;
       default:
-        return Colors.grey;
+        return Colors.blue;
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Trips'),
-        backgroundColor: Colors.teal.shade600,
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshTrips,
-        color: Colors.teal.shade600,
-        child: trips.isEmpty ? _buildEmptyState() : ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: trips.length,
-          itemBuilder: (context, index) {
-            final trip = trips[index];
-            return _buildTripCard(trip);
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showMessage('Creating new trip...'),
-        backgroundColor: Colors.teal.shade600,
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.luggage, size: 60, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'No Trips Yet',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Start planning your adventure by creating a new trip!',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _showMessage('Create new trip'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal.shade600,
-              ),
-              child: const Text('Create Trip'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildTripCard(Map<String, dynamic> trip) {
@@ -162,7 +113,8 @@ class _MyTripsState extends State<MyTrips> {
       elevation: 2,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onTap: () => _showMessage('Viewing ${trip['title']}'),
+        onTap: () =>
+            SnackbarHelper.showInfo(context, 'Viewing ${trip['title']}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -170,10 +122,7 @@ class _MyTripsState extends State<MyTrips> {
               height: 150,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.teal.shade600,
-                    Colors.teal.shade400,
-                  ],
+                  colors: [const Color(0xFF00897B), const Color(0xFF26A69A)],
                 ),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(15),
@@ -182,19 +131,25 @@ class _MyTripsState extends State<MyTrips> {
               child: Stack(
                 children: [
                   Center(
-                    child: Text(trip['image'], style: const TextStyle(fontSize: 60)),
+                    child: Text(
+                      _getEmojiForCategory(trip['category']),
+                      style: const TextStyle(fontSize: 60),
+                    ),
                   ),
                   Positioned(
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(trip['status']),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        trip['status'],
+                        trip['status'] ?? 'Upcoming',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -206,61 +161,67 @@ class _MyTripsState extends State<MyTrips> {
                 ],
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    trip['title'],
+                    trip['title'] ?? 'Unknown Trip',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blueGrey,
+                      color: Color(0xFF263238),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
-                      Text(
-                        trip['destination'],
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      Expanded(
+                        child: Text(
+                          trip['location'] ?? 'Unknown Destination',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-
                   Row(
                     children: [
-                      _buildInfoColumn('Duration', '${trip['days']} days'),
-                      _buildInfoColumn('Activities', '${trip['activities']} planned'),
+                      _buildInfoColumn('Date', trip['startDate'] ?? 'TBD'),
+                      _buildInfoColumn('Price', trip['price'] ?? '-'),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    '${trip['startDate']} - ${trip['endDate']}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton.icon(
-                        onPressed: () => _showMessage('Edit ${trip['title']}'),
+                        onPressed: () => SnackbarHelper.showInfo(
+                          context,
+                          'Edit not available',
+                        ),
                         icon: const Icon(Icons.edit),
                         label: const Text('Edit'),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.teal.shade600,
+                          foregroundColor: const Color(0xFF00897B),
                         ),
                       ),
                       TextButton.icon(
                         onPressed: () => _deleteTrip(trip),
                         icon: const Icon(Icons.delete),
-                        label: const Text('Delete'),
+                        label: const Text('Cancel'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.red,
                         ),
@@ -276,6 +237,15 @@ class _MyTripsState extends State<MyTrips> {
     );
   }
 
+  String _getEmojiForCategory(String? category) {
+    if (category == 'Flights') return '✈️';
+    if (category == 'Hotels') return '🏨';
+    if (category == 'Activities') return '🎯';
+    if (category == 'Places') return '🌍';
+    if (category == 'Restaurants') return '🍽️';
+    return '✈️';
+  }
+
   Widget _buildInfoColumn(String title, String value) {
     return Expanded(
       child: Column(
@@ -288,7 +258,7 @@ class _MyTripsState extends State<MyTrips> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color:Colors.teal,
+              color: Color(0xFF00897B),
             ),
           ),
         ],

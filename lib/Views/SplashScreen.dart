@@ -4,7 +4,9 @@ import 'package:flutter_map/flutter_map.dart'; // Flutter Map package
 import 'package:latlong2/latlong.dart'; // For storing latitude &amp; longitude
 import 'package:geolocator/geolocator.dart';
 import 'package:travelmate/Views/LoginScreen.dart';
+import 'package:travelmate/Views/MainNavigation.dart';
 
+import 'package:travelmate/Services/Auth/AuthServices.dart';
 import '../Services/location/location_storage.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -57,38 +59,40 @@ class _SplashScreenState extends State<SplashScreen>
     _navigateToLogin();
   }
 
-  Future <void> _initLocation() async {
+  Future<void> _initLocation() async {
     bool serviceEnabled; // To check if GPS is ON
     LocationPermission permission; // To check location permissions
-// Check if GPS is enabled
+    // Check if GPS is enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       setState(() {
-        statusMessage = "GPS is OFF. Please turn it ON."; // Show message if GPS OFF
+        statusMessage =
+            "GPS is OFF. Please turn it ON."; // Show message if GPS OFF
       });
       return;
     }
-// Check if app has permission to access location
+    // Check if app has permission to access location
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-// Ask user for permission
+      // Ask user for permission
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         setState(() {
-          statusMessage = "Location permission denied!"; // User denied permission
+          statusMessage =
+              "Location permission denied!"; // User denied permission
         });
         return;
       }
     }
-// If permission is denied forever (cannot ask again)
+    // If permission is denied forever (cannot ask again)
     if (permission == LocationPermission.deniedForever) {
       setState(() {
         statusMessage =
-        "Location permission permanently denied! Enable in Settings.";
+            "Location permission permanently denied! Enable in Settings.";
       });
       return;
     }
-// Try to get the last known location (fastest way)
+    // Try to get the last known location (fastest way)
     Position? lastPos = await Geolocator.getLastKnownPosition();
     if (lastPos != null) {
       setState(() {
@@ -96,24 +100,30 @@ class _SplashScreenState extends State<SplashScreen>
         _mapController.move(currentLocation!, 16);
       });
     }
-// Get current location if last known location is not available
+    // Get current location if last known location is not available
     try {
       Position pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high); // High accuracy location
+        desiredAccuracy: LocationAccuracy.high,
+      ); // High accuracy location
       setState(() {
         currentLocation = LatLng(pos.latitude, pos.longitude);
-        _mapController.move(currentLocation!, 16); // Move map to current location
+        _mapController.move(
+          currentLocation!,
+          16,
+        ); // Move map to current location
       });
     } catch (e) {
       setState(() {
         statusMessage = "Failed to get current location.";
       });
     }
-// Start listening to location changes (live tracking)
+    // Start listening to location changes (live tracking)
     Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high, distanceFilter: 5))
-        .listen((Position pos) {
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      ),
+    ).listen((Position pos) {
       setState(() {
         currentLocation = LatLng(pos.latitude, pos.longitude);
       });
@@ -128,10 +138,18 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToLogin() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      final user = AuthService.firebase().currentUser;
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
 

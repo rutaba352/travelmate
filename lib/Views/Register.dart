@@ -5,7 +5,7 @@ import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
 import 'package:travelmate/Views/LoginScreen.dart';
-import 'package:travelmate/main.dart';
+import 'package:travelmate/Views/MainNavigation.dart';
 
 class Register extends StatefulWidget {
   const Register({Key? key}) : super(key: key);
@@ -104,10 +104,7 @@ class _RegisterState extends State<Register> {
     }
 
     if (!_agreeToTerms) {
-      SnackbarHelper.showWarning(
-        context,
-        'Please agree to Terms & Conditions',
-      );
+      SnackbarHelper.showWarning(context, 'Please agree to Terms & Conditions');
       return;
     }
 
@@ -158,10 +155,7 @@ class _RegisterState extends State<Register> {
     } on InvalidEmailAuthException {
       setState(() => _isLoading = false);
       if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'Invalid email format.',
-        );
+        SnackbarHelper.showError(context, 'Invalid email format.');
       }
     } on GenericAuthException {
       setState(() => _isLoading = false);
@@ -218,10 +212,7 @@ class _RegisterState extends State<Register> {
                       const SizedBox(height: 8),
                       Text(
                         'Sign up to start your journey',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
@@ -421,7 +412,8 @@ class _RegisterState extends State<Register> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => const LoginScreen()),
+                                  builder: (context) => const LoginScreen(),
+                                ),
                               );
                             },
                             child: const Text(
@@ -489,8 +481,7 @@ class _RegisterState extends State<Register> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Color(0xFF00897B), width: 2),
+              borderSide: const BorderSide(color: Color(0xFF00897B), width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

@@ -4,7 +4,11 @@ import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Services/UserService.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/Widgets.dart';
+import 'package:travelmate/Services/SavedItemsService.dart';
 import 'package:travelmate/Views/LoginScreen.dart';
+import 'package:travelmate/Views/MyTrips.dart';
+import 'package:travelmate/Services/DataSeeder.dart';
+import 'package:travelmate/Views/MainNavigation.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -13,23 +17,28 @@ class Profile extends StatefulWidget {
   State<Profile> createState() => _ProfileState();
 }
 
-class _ProfileState extends State<Profile>
-    with SingleTickerProviderStateMixin {
+class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   bool _isEditing = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
-  final UserService _userService = UserService();
+  String? _photoURL;
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'John Anderson');
-  final TextEditingController _emailController =
-      TextEditingController(text: 'john.anderson@email.com');
-  final TextEditingController _phoneController =
-      TextEditingController(text: '+1 234 567 8900');
-  final TextEditingController _bioController =
-      TextEditingController(text: 'Adventure seeker | World explorer 🌍');
+  final UserService _userService = UserService();
+  final SavedItemsService _savedItemsService = SavedItemsService();
+
+  final TextEditingController _nameController = TextEditingController(
+    text: 'John Anderson',
+  );
+  final TextEditingController _emailController = TextEditingController(
+    text: 'john.anderson@email.com',
+  );
+  final TextEditingController _phoneController = TextEditingController(
+    text: '+1 234 567 8900',
+  );
+  final TextEditingController _bioController = TextEditingController(
+    text: 'Adventure seeker | World explorer 🌍',
+  );
 
   late final AuthService _authService;
 
@@ -50,25 +59,40 @@ class _ProfileState extends State<Profile>
 
   Future<void> _loadUserData() async {
     final user = _authService.currentUser;
-    
+
     if (user != null) {
+      if (!mounted) return;
+
+      // First, set data from Firebase Auth (works for Google Sign-In)
       setState(() {
         _emailController.text = user.email;
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          _nameController.text = user.displayName!;
+        }
+        _photoURL = user.photoURL;
       });
-      
+
+      // Then try to get additional data from Firestore
       try {
         final userData = await _userService.getUserData(user.id);
-        
+
         if (userData != null && mounted) {
           setState(() {
-            _nameController.text = userData['name'] ?? 'User';
+            if (userData['name'] != null &&
+                userData['name'].toString().isNotEmpty) {
+              if (user.displayName == null || user.displayName!.isEmpty) {
+                _nameController.text = userData['name'];
+              }
+            }
             _phoneController.text = userData['phoneNumber'] ?? 'Not provided';
+            if (userData['bio'] != null &&
+                userData['bio'].toString().isNotEmpty) {
+              _bioController.text = userData['bio'];
+            }
           });
         }
       } catch (e) {
-        if (mounted) {
-          SnackbarHelper.showError(context, 'Failed to load profile data');
-        }
+        // Silent error
       }
     }
   }
@@ -99,7 +123,7 @@ class _ProfileState extends State<Profile>
   }
 
   Future<void> _refreshProfile() async {
-    await Future.delayed(const Duration(seconds: 1));
+    await _loadUserData();
     if (mounted) {
       SnackbarHelper.showSuccess(context, 'Profile refreshed');
     }
@@ -125,7 +149,8 @@ class _ProfileState extends State<Profile>
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red[700],
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('LOGOUT'),
           ),
@@ -167,17 +192,43 @@ class _ProfileState extends State<Profile>
         color: const Color(0xFF00897B),
         child: CustomScrollView(
           slivers: [
-            buildAppBar(_isEditing, () {
-              setState(() => _isEditing = true);
-              SnackbarHelper.showInfo(context, 'Edit mode enabled');
-            }),
+            buildAppBar(
+              _isEditing,
+              () {
+                setState(() => _isEditing = true);
+                SnackbarHelper.showInfo(context, 'Edit mode enabled');
+              },
+              photoURL: _photoURL,
+              userName: _nameController.text,
+            ),
             SliverToBoxAdapter(
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-                    buildStatsSection(),
+                    // Nested StreamBuilders for real-time stats
+                    StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: _savedItemsService.getBookingsStream(),
+                      builder: (context, bookingsSnapshot) {
+                        return StreamBuilder<List<Map<String, dynamic>>>(
+                          stream: _savedItemsService.getSavedItemsStream(),
+                          builder: (context, savedSnapshot) {
+                            final bookingsCount =
+                                bookingsSnapshot.data?.length ?? 0;
+                            final savedCount = savedSnapshot.data?.length ?? 0;
+
+                            return buildStatsSection(
+                              trips: bookingsCount,
+                              places: savedCount,
+                              photos: 12, // Placeholder
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildMyPlansPreviewStream(),
                     const SizedBox(height: 20),
                     buildProfileInfo(
                       _nameController,
@@ -193,6 +244,56 @@ class _ProfileState extends State<Profile>
                     const SizedBox(height: 20),
                     buildMenuSection(_showLogoutDialog, context),
                     const SizedBox(height: 20),
+                    // Developer Tools
+                    ExpansionTile(
+                      title: const Text(
+                        'Developer Options',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.cloud_upload,
+                            color: Colors.orange,
+                          ),
+                          title: const Text('Seed Data to Firestore'),
+                          subtitle: const Text('Upload static hotels & spots'),
+                          onTap: () async {
+                            try {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+
+                              // Call Seeder
+                              final seeder = DataSeeder();
+                              await seeder.seedTouristSpots();
+                              await seeder.seedHotels();
+
+                              if (context.mounted) {
+                                Navigator.pop(context); // Close loading
+                                SnackbarHelper.showSuccess(
+                                  context,
+                                  'Data Seeded Successfully!',
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                SnackbarHelper.showError(
+                                  context,
+                                  'Seeding Failed: $e',
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -201,5 +302,153 @@ class _ProfileState extends State<Profile>
         ),
       ),
     );
+  }
+
+  Widget _buildMyPlansPreviewStream() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _savedItemsService.getBookingsStream(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final plans = snapshot.data!.take(5).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'My Plans',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      MainNavigation.switchTab(
+                        context,
+                        2,
+                      ); // Switch to My Trips (Need to add My Trips tab or navigate)
+                      // Actually My Trips is a separate page usually reachable from "See All"
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MyTrips(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'See All',
+                      style: TextStyle(color: Color(0xFF00897B)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 140,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                itemCount: plans.length,
+                itemBuilder: (context, index) {
+                  final plan = plans[index];
+                  return Container(
+                    width: 200,
+                    margin: const EdgeInsets.only(right: 12, bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00897B).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getPlanIcon(plan['category'] ?? 'General'),
+                                size: 20,
+                                color: const Color(0xFF00897B),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                plan['name'] ?? 'Trip',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Text(
+                          plan['category'] ?? 'General',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              plan['startDate'] ?? 'Upcoming',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              'Booked',
+                              style: TextStyle(
+                                color: const Color(0xFF00897B),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  IconData _getPlanIcon(String category) {
+    if (category == 'Flights') return Icons.flight;
+    if (category == 'Hotels') return Icons.hotel;
+    if (category == 'Activities') return Icons.local_activity;
+    if (category == 'Restaurants') return Icons.restaurant;
+    return Icons.card_travel;
   }
 }

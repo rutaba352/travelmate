@@ -3,6 +3,7 @@ import 'package:travelmate/Services/API/AmadeusApiService.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
+import 'package:travelmate/Services/SavedItemsService.dart';
 
 class SearchResults extends StatefulWidget {
   final String? query;
@@ -47,7 +48,7 @@ class _SearchResultsState extends State<SearchResults> {
     'Flights',
     'Hotels',
     'Packages',
-    'Activities'
+    'Activities',
   ];
 
   final List<String> sortOptions = [
@@ -55,7 +56,7 @@ class _SearchResultsState extends State<SearchResults> {
     'Price: Low to High',
     'Price: High to Low',
     'Rating',
-    'Duration'
+    'Duration',
   ];
 
   @override
@@ -132,18 +133,28 @@ class _SearchResultsState extends State<SearchResults> {
   Future<void> _getLocationCodes() async {
     try {
       // Search origin
-      final originResults = await _apiService.searchLocations(widget.startLocation!);
+      final originResults = await _apiService.searchLocations(
+        widget.startLocation!,
+      );
       if (originResults.isNotEmpty) {
         _originCode = originResults[0]['code'];
       }
 
       // Search destination
-      final destResults = await _apiService.searchLocations(widget.destination!);
+      final destResults = await _apiService.searchLocations(
+        widget.destination!,
+      );
       if (destResults.isNotEmpty) {
         _destinationCode = destResults[0]['code'];
         // Get coordinates for activities search
-        _destLatitude = 48.8566; // Default to Paris coordinates
-        _destLongitude = 2.3522; // You can enhance this by getting real coords
+        final geo = destResults[0]['geoCode'];
+        if (geo != null) {
+          _destLatitude = (geo['latitude'] as num).toDouble();
+          _destLongitude = (geo['longitude'] as num).toDouble();
+        } else {
+          _destLatitude = 48.8566;
+          _destLongitude = 2.3522;
+        }
       }
     } catch (e) {
       throw Exception('Failed to get location codes: $e');
@@ -211,10 +222,9 @@ class _SearchResultsState extends State<SearchResults> {
     // Create top 3 package combinations
     for (int i = 0; i < _flights.length && i < 3; i++) {
       for (int j = 0; j < _hotels.length && j < 1; j++) {
-        _apiService.createPackage(
-          flight: _flights[i],
-          hotel: _hotels[j],
-        ).then((package) {
+        _apiService.createPackage(flight: _flights[i], hotel: _hotels[j]).then((
+          package,
+        ) {
           setState(() {
             _packages.add(package);
           });
@@ -336,10 +346,7 @@ class _SearchResultsState extends State<SearchResults> {
                       const SizedBox(height: 4),
                       Text(
                         'Tomorrow • 1 Adult',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -395,8 +402,11 @@ class _SearchResultsState extends State<SearchResults> {
                       count = _packages.length;
                       break;
                     case 'All':
-                      count = _flights.length + _hotels.length +
-                          _activities.length + _packages.length;
+                      count =
+                          _flights.length +
+                          _hotels.length +
+                          _activities.length +
+                          _packages.length;
                       break;
                   }
 
@@ -411,14 +421,14 @@ class _SearchResultsState extends State<SearchResults> {
                         });
                       },
                       backgroundColor: Colors.grey[100],
-                      selectedColor:
-                      const Color(0xFF00897B).withOpacity(0.2),
+                      selectedColor: const Color(0xFF00897B).withOpacity(0.2),
                       labelStyle: TextStyle(
                         color: isSelected
                             ? const Color(0xFF00897B)
                             : Colors.grey[700],
-                        fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                       side: BorderSide(
                         color: isSelected
@@ -460,9 +470,7 @@ class _SearchResultsState extends State<SearchResults> {
           const SizedBox(height: 12),
 
           // Results List
-          Expanded(
-            child: _buildResultsBody(),
-          ),
+          Expanded(child: _buildResultsBody()),
         ],
       ),
     );
@@ -515,7 +523,8 @@ class _SearchResultsState extends State<SearchResults> {
           return _buildFlightCard(result);
         } else if (result.containsKey('roomType')) {
           return _buildHotelCard(result);
-        } else if (result.containsKey('category') && result.containsKey('description')) {
+        } else if (result.containsKey('category') &&
+            result.containsKey('description')) {
           return _buildActivityCard(result);
         } else if (result.containsKey('type') && result['type'] == 'Package') {
           return _buildPackageCard(result);
@@ -552,14 +561,14 @@ class _SearchResultsState extends State<SearchResults> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${flight['airline']} ${flight['flightNumber']}',
+                        '${flight['airline'] ?? 'Unknown'} ${flight['flightNumber'] ?? ''}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        '${flight['stops']} stop${flight['stops'] != 1 ? 's' : ''}',
+                        '${flight['stops'] ?? 0} stop${(flight['stops'] ?? 0) != 1 ? 's' : ''}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
@@ -569,7 +578,7 @@ class _SearchResultsState extends State<SearchResults> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${flight['price']['currency']} ${flight['price']['total']}',
+                      '${flight['price']?['currency'] ?? 'PKR'} ${flight['price']?['total'] ?? 'N/A'}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -577,10 +586,17 @@ class _SearchResultsState extends State<SearchResults> {
                       ),
                     ),
                     Text(
-                      '${flight['seats']} seats left',
+                      '${flight['seats'] ?? 0} seats left',
                       style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.favorite_border),
+                  color: Colors.grey,
+                  onPressed: () => _saveFlight(flight),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.only(left: 8),
                 ),
               ],
             ),
@@ -625,10 +641,7 @@ class _SearchResultsState extends State<SearchResults> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          time,
-          style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-        ),
+        Text(time, style: TextStyle(fontSize: 14, color: Colors.grey[700])),
       ],
     );
   }
@@ -684,7 +697,7 @@ class _SearchResultsState extends State<SearchResults> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${hotel['price']['currency']} ${hotel['price']['perNight']}/night',
+                      '${hotel['price']?['currency'] ?? 'PKR'} ${hotel['price']?['perNight'] ?? 'N/A'}/night',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -692,20 +705,30 @@ class _SearchResultsState extends State<SearchResults> {
                       ),
                     ),
                     Text(
-                      'Total: ${hotel['price']['currency']} ${hotel['price']['total']}',
+                      'Total: ${hotel['price']?['currency'] ?? 'PKR'} ${hotel['price']?['total'] ?? 'N/A'}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
-                ElevatedButton(
-                  onPressed: () => SnackbarHelper.showInfo(context, 'Booking hotel...'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00897B),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.favorite_border),
+                      color: Colors.grey,
+                      onPressed: () => _saveHotel(hotel),
                     ),
-                  ),
-                  child: const Text('Book'),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => _bookItem(hotel, 'hotel'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00897B),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Book'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -733,7 +756,10 @@ class _SearchResultsState extends State<SearchResults> {
                     color: const Color(0xFF00897B).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.local_activity, color: Color(0xFF00897B)),
+                  child: const Icon(
+                    Icons.local_activity,
+                    color: Color(0xFF00897B),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -770,22 +796,32 @@ class _SearchResultsState extends State<SearchResults> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${activity['price']['currency']} ${activity['price']['amount']}',
+                  '${activity['price']?['currency'] ?? 'PKR'} ${activity['price']?['amount'] ?? 'N/A'}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF00897B),
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: () => SnackbarHelper.showInfo(context, 'Booking activity...'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00897B),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.favorite_border),
+                      color: Colors.grey,
+                      onPressed: () => _saveActivity(activity),
                     ),
-                  ),
-                  child: const Text('Book'),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => _bookItem(activity, 'activity'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00897B),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Book'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -804,10 +840,7 @@ class _SearchResultsState extends State<SearchResults> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
           gradient: LinearGradient(
-            colors: [
-              const Color(0xFF00897B).withOpacity(0.05),
-              Colors.white,
-            ],
+            colors: [const Color(0xFF00897B).withOpacity(0.05), Colors.white],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -820,17 +853,24 @@ class _SearchResultsState extends State<SearchResults> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.local_offer, size: 14, color: Colors.white),
+                        const Icon(
+                          Icons.local_offer,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                         const SizedBox(width: 4),
                         Text(
-                          'SAVE ${package['savings']}',
+                          'SAVE ${package['savings'] ?? '0%'}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -852,16 +892,13 @@ class _SearchResultsState extends State<SearchResults> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 '✈️ Flight + 🏨 Hotel',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
-                package['duration'],
+                package['duration'] ?? 'Duration N/A',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const Divider(height: 24),
@@ -876,7 +913,7 @@ class _SearchResultsState extends State<SearchResults> {
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       Text(
-                        '${package['price']['currency']} ${package['price']['total'].toStringAsFixed(0)}',
+                        '${package['price']?['currency'] ?? 'PKR'} ${package['price']?['total']?.toStringAsFixed(0) ?? 'N/A'}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -893,7 +930,7 @@ class _SearchResultsState extends State<SearchResults> {
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       Text(
-                        '${package['price']['currency']} ${package['price']['finalPrice'].toStringAsFixed(0)}',
+                        '${package['price']?['currency'] ?? 'PKR'} ${package['price']?['finalPrice']?.toStringAsFixed(0) ?? 'N/A'}',
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -908,10 +945,8 @@ class _SearchResultsState extends State<SearchResults> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => SnackbarHelper.showSuccess(
-                    context,
-                    'Booking package...',
-                  ),
+                  onPressed: () =>
+                      SnackbarHelper.showSuccess(context, 'Booking package...'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00897B),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -921,10 +956,7 @@ class _SearchResultsState extends State<SearchResults> {
                   ),
                   child: const Text(
                     'Book Package',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -933,6 +965,50 @@ class _SearchResultsState extends State<SearchResults> {
         ),
       ),
     );
+  }
+
+  // ============ HELPERS ============
+
+  Future<void> _saveFlight(Map<String, dynamic> flight) async {
+    final success = await SavedItemsService().saveFlight(flight);
+    if (mounted) _showSaveMessage(success, 'Flight saved');
+  }
+
+  Future<void> _saveHotel(Map<String, dynamic> hotel) async {
+    final success = await SavedItemsService().saveHotel(hotel);
+    if (mounted) _showSaveMessage(success, 'Hotel saved');
+  }
+
+  Future<void> _saveActivity(Map<String, dynamic> activity) async {
+    final success = await SavedItemsService().saveActivity(activity);
+    if (mounted) _showSaveMessage(success, 'Activity saved');
+  }
+
+  Future<void> _bookItem(Map<String, dynamic> item, String type) async {
+    bool success = false;
+    if (type == 'flight') {
+      success = await SavedItemsService().bookFlight(item);
+    } else if (type == 'hotel') {
+      success = await SavedItemsService().bookHotel(item);
+    } else if (type == 'activity') {
+      success = await SavedItemsService().bookActivity(item);
+    }
+
+    if (mounted) {
+      if (success) {
+        SnackbarHelper.showSuccess(context, '$type booked! Check My Trips.');
+      } else {
+        SnackbarHelper.showError(context, 'Failed to book $type');
+      }
+    }
+  }
+
+  void _showSaveMessage(bool success, String message) {
+    if (success) {
+      SnackbarHelper.showSuccess(context, message);
+    } else {
+      SnackbarHelper.showError(context, 'Failed to save');
+    }
   }
 
   String _formatTime(String isoTime) {

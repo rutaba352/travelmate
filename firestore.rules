@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Public Collections
+    // Allow anyone to read, but only authenticated users to write (e.g. for Seeding)
+    match /tourist_spots/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    match /hotels/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // User Data
+    // Only the owner can read/write their own data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      match /bookings/{bookingId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /savedItems/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}

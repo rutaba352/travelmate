@@ -10,6 +10,7 @@ class Hotel {
   final String imagePath;
   final double rating;
   final double price;
+  final List<String> amenities;
 
   Hotel({
     required this.id,
@@ -21,6 +22,7 @@ class Hotel {
     required this.imagePath,
     required this.rating,
     required this.price,
+    this.amenities = const [],
   });
 
   // Convert to LatLng for map

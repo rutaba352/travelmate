@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
-import 'package:travelmate/Views/SpotDetails.dart';  // ← ADD THIS
-import 'package:travelmate/Views/HotelList.dart';  // ← ADD THIS
-import 'package:travelmate/Views/TouristSpotsList.dart';  // ← ADD THIS
-import 'package:travelmate/Views/MyTrips.dart';  // ← ADD THIS
-import 'package:travelmate/Views/Settings.dart';  // ← ADD THIS
-import 'package:travelmate/Views/LoginScreen.dart';  // ← ADD THIS
+import 'package:travelmate/Views/HotelList.dart';
+import 'package:travelmate/Views/TouristSpotsList.dart';
+import 'package:travelmate/Views/MyTrips.dart';
 import 'package:travelmate/Views/Activities.dart';
 import 'package:travelmate/Views/Dining.dart';
+import 'package:travelmate/Views/PaymentMethods.dart';
+import 'package:travelmate/Views/MainNavigation.dart';
+
 // ===== Header =====
 Widget buildHeader() {
   return Row(
@@ -18,10 +18,7 @@ Widget buildHeader() {
         children: [
           Text(
             'Welcome Back',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -66,7 +63,10 @@ Widget buildLocationInput({
         hintText: hint,
         prefixIcon: Icon(icon, color: const Color(0xFF00897B)),
         border: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: 15,
+        ),
       ),
     ),
   );
@@ -139,10 +139,7 @@ Widget buildSearchSection(
                 SizedBox(width: 8),
                 Text(
                   'Search',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -281,8 +278,16 @@ Widget buildQuickActions(BuildContext context) {
   final actions = [
     {'icon': Icons.hotel, 'label': 'Hotels', 'color': const Color(0xFF00897B)},
     {'icon': Icons.tour, 'label': 'Tours', 'color': const Color(0xFF26A69A)},
-    {'icon': Icons.restaurant, 'label': 'Dining', 'color': const Color(0xFF00897B)},
-    {'icon': Icons.local_activity, 'label': 'Activities', 'color': const Color(0xFF26A69A)},
+    {
+      'icon': Icons.restaurant,
+      'label': 'Dining',
+      'color': const Color(0xFF00897B),
+    },
+    {
+      'icon': Icons.local_activity,
+      'label': 'Activities',
+      'color': const Color(0xFF26A69A),
+    },
   ];
 
   return Column(
@@ -303,43 +308,35 @@ Widget buildQuickActions(BuildContext context) {
           return Expanded(
             child: GestureDetector(
               onTap: () {
-  if (action['label'] == 'Hotels') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HotelList(),
-      ),
-    );
-  } else if (action['label'] == 'Tours') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TouristSpotsList(),
-      ),
-    );
-  } else if (action['label'] == 'Activities') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const Activities(),
-      ),
-    );
-  } 
-  else if (action['label'] == 'Dining') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const Dining(),
-    ),
-  );
-}
-else {
-    SnackbarHelper.showInfo(
-      context,
-      'Opening ${action['label']}...',
-    );
-  }
-},
+                if (action['label'] == 'Hotels') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => HotelList()),
+                  );
+                } else if (action['label'] == 'Tours') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TouristSpotsList(),
+                    ),
+                  );
+                } else if (action['label'] == 'Activities') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Activities()),
+                  );
+                } else if (action['label'] == 'Dining') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Dining()),
+                  );
+                } else {
+                  SnackbarHelper.showInfo(
+                    context,
+                    'Opening ${action['label']}...',
+                  );
+                }
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -413,11 +410,7 @@ Widget buildSearchItem(String from, String to) {
             color: const Color(0xFF00897B).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(
-            Icons.history,
-            color: Color(0xFF00897B),
-            size: 20,
-          ),
+          child: const Icon(Icons.history, color: Color(0xFF00897B), size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -443,8 +436,10 @@ Widget buildSearchItem(String from, String to) {
 // ===== Profile Widgets =====
 Widget buildAppBar(
   bool isEditing,
-  VoidCallback onEditTap,
-) {
+  VoidCallback onEditTap, {
+  String? photoURL,
+  String? userName,
+}) {
   return SliverAppBar(
     expandedHeight: 200,
     floating: false,
@@ -479,14 +474,24 @@ Widget buildAppBar(
                         ),
                       ],
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Color(0xFF00897B),
-                      ),
+                      backgroundImage: photoURL != null && photoURL.isNotEmpty
+                          ? NetworkImage(photoURL)
+                          : null,
+                      child: photoURL == null || photoURL.isEmpty
+                          ? Text(
+                              userName != null && userName.isNotEmpty
+                                  ? userName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF00897B),
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                   Positioned(
@@ -520,15 +525,12 @@ Widget buildAppBar(
     ),
     actions: [
       if (!isEditing)
-        IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: onEditTap,
-        ),
+        IconButton(icon: const Icon(Icons.edit), onPressed: onEditTap),
     ],
   );
 }
 
-Widget buildStatsSection() {
+Widget buildStatsSection({int trips = 0, int places = 0, int photos = 0}) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     padding: const EdgeInsets.all(20),
@@ -546,11 +548,11 @@ Widget buildStatsSection() {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        buildStatItem('24', 'Trips', Icons.flight_takeoff),
+        buildStatItem(trips.toString(), 'Trips', Icons.flight_takeoff),
         Container(width: 1, height: 40, color: Colors.grey[300]),
-        buildStatItem('156', 'Places', Icons.location_on),
+        buildStatItem(places.toString(), 'Saved', Icons.bookmark),
         Container(width: 1, height: 40, color: Colors.grey[300]),
-        buildStatItem('89', 'Photos', Icons.photo_camera),
+        buildStatItem(photos.toString(), 'Photos', Icons.photo_camera),
       ],
     ),
   );
@@ -569,13 +571,7 @@ Widget buildStatItem(String value, String label, IconData icon) {
           color: Color(0xFF263238),
         ),
       ),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey[600],
-        ),
-      ),
+      Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
     ],
   );
 }
@@ -612,8 +608,9 @@ Widget buildMenuItem(
               ),
               child: Icon(
                 icon,
-                color:
-                    isDestructive ? Colors.red[700] : const Color(0xFF00897B),
+                color: isDestructive
+                    ? Colors.red[700]
+                    : const Color(0xFF00897B),
                 size: 22,
               ),
             ),
@@ -630,11 +627,7 @@ Widget buildMenuItem(
                 ),
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
           ],
         ),
       ),
@@ -661,45 +654,52 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context) {
         buildMenuItem(
           'My Trips',
           Icons.luggage,
-          () => SnackbarHelper.showInfo(context, 'Opening My Trips'),
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyTrips()),
+          ),
         ),
         buildDivider(),
         buildMenuItem(
           'Saved Places',
           Icons.bookmark,
-          () => SnackbarHelper.showInfo(context, 'Opening Saved Places'),
+          () => MainNavigation.switchTab(context, 2),
         ),
         buildDivider(),
         buildMenuItem(
           'Payment Methods',
           Icons.payment,
-          () => SnackbarHelper.showInfo(context, 'Opening Payment Methods'),
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PaymentMethods()),
+          ),
         ),
         buildDivider(),
         buildMenuItem(
           'Settings',
           Icons.settings,
-              () => Navigator.pushNamed(context, '/settings'),
+          () => Navigator.pushNamed(context, '/settings'),
         ),
         buildDivider(),
         buildMenuItem(
           'Help & Support',
           Icons.help_outline,
-          () => SnackbarHelper.showInfo(context, 'Opening Help & Support'),
+          () => SnackbarHelper.showInfo(
+            context,
+            'Support: support@travelmate.com',
+          ),
         ),
         buildDivider(),
         buildMenuItem(
           'Privacy Policy',
           Icons.privacy_tip_outlined,
-          () => SnackbarHelper.showInfo(context, 'Opening Privacy Policy'),
+          () => SnackbarHelper.showInfo(
+            context,
+            'Privacy Policy: Data is stored securely on Firebase.',
+          ),
         ),
         buildDivider(),
-        buildMenuItem(
-          'Logout',
-          Icons.logout,
-          onLogout,
-          isDestructive: true,
-        ),
+        buildMenuItem('Logout', Icons.logout, onLogout, isDestructive: true),
       ],
     ),
   );
@@ -737,10 +737,7 @@ Widget buildInfoField(
           controller: controller,
           enabled: enabled,
           maxLines: maxLines,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF263238),
-          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF263238)),
           decoration: InputDecoration(
             prefixIcon: Icon(
               icon,
@@ -801,10 +798,7 @@ Widget buildProfileInfo(
             if (isEditing)
               Row(
                 children: [
-                  TextButton(
-                    onPressed: onCancel,
-                    child: const Text('Cancel'),
-                  ),
+                  TextButton(onPressed: onCancel, child: const Text('Cancel')),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: isLoading ? null : onSave,
@@ -820,8 +814,9 @@ Widget buildProfileInfo(
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text('Save'),

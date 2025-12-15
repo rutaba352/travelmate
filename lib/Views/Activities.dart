@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
+import 'package:travelmate/Services/SavedItemsService.dart';
 
 class Activities extends StatefulWidget {
   final String? cityName;
@@ -242,7 +243,8 @@ class _ActivitiesState extends State<Activities> {
             .toString()
             .toLowerCase()
             .contains(_searchController.text.toLowerCase());
-        final matchesCategory = _selectedCategory == 'All' ||
+        final matchesCategory =
+            _selectedCategory == 'All' ||
             activity['category'] == _selectedCategory;
         return matchesSearch && matchesCategory;
       }).toList();
@@ -251,8 +253,9 @@ class _ActivitiesState extends State<Activities> {
 
   void _toggleSave(String activityId) {
     setState(() {
-      final index =
-          _filteredActivities.indexWhere((a) => a['id'] == activityId);
+      final index = _filteredActivities.indexWhere(
+        (a) => a['id'] == activityId,
+      );
       if (index != -1) {
         _filteredActivities[index]['isSaved'] =
             !_filteredActivities[index]['isSaved'];
@@ -347,19 +350,23 @@ class _ActivitiesState extends State<Activities> {
                   ],
                 ),
                 const SizedBox(height: 25),
-                _buildInfoRow(Icons.access_time, 'Duration', activity['duration']),
+                _buildInfoRow(
+                  Icons.access_time,
+                  'Duration',
+                  activity['duration'],
+                ),
                 const SizedBox(height: 12),
-                _buildInfoRow(Icons.signal_cellular_alt, 'Difficulty',
-                    activity['difficulty']),
+                _buildInfoRow(
+                  Icons.signal_cellular_alt,
+                  'Difficulty',
+                  activity['difficulty'],
+                ),
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.attach_money, 'Price', activity['price']),
                 const SizedBox(height: 25),
                 const Text(
                   'Select Date & Time',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
                 Container(
@@ -370,15 +377,14 @@ class _ActivitiesState extends State<Activities> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today,
-                          color: Color(0xFF00897B)),
+                      const Icon(
+                        Icons.calendar_today,
+                        color: Color(0xFF00897B),
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         'Tomorrow, 10:00 AM',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                     ],
                   ),
@@ -386,10 +392,7 @@ class _ActivitiesState extends State<Activities> {
                 const SizedBox(height: 15),
                 const Text(
                   'Number of Participants',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
                 Row(
@@ -427,12 +430,26 @@ class _ActivitiesState extends State<Activities> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.pop(context);
-                      SnackbarHelper.showSuccess(
-                        context,
-                        '${activity['name']} booked successfully!',
-                      );
+                      // Book Activity Logic
+                      await SavedItemsService().bookItem({
+                        'name': activity['name'],
+                        'location': activity['location'],
+                        'price': activity['price'],
+                        'category': 'Activities',
+                        'image': activity['image'],
+                        'rating': activity['rating'],
+                        'description': activity['description'],
+                        'type': 'activity',
+                      });
+
+                      if (context.mounted) {
+                        SnackbarHelper.showSuccess(
+                          context,
+                          '${activity['name']} booked successfully!',
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00897B),
@@ -466,18 +483,12 @@ class _ActivitiesState extends State<Activities> {
         const SizedBox(width: 10),
         Text(
           '$label:',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
         const SizedBox(width: 8),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -489,7 +500,9 @@ class _ActivitiesState extends State<Activities> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          widget.cityName != null ? '${widget.cityName} Activities' : 'Activities',
+          widget.cityName != null
+              ? '${widget.cityName} Activities'
+              : 'Activities',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -508,26 +521,24 @@ class _ActivitiesState extends State<Activities> {
         ],
       ),
       body: _isLoading
-    ? const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF00897B),
-        ),
-      )
-    : Column(
-        children: [
-          _buildSearchAndFilter(),
-          _buildCategoryFilter(),
-          Expanded(
-            child: _filteredActivities.isEmpty
-                ? const EmptyState(
-                    icon: Icons.local_activity_outlined,
-                    title: 'No Activities Found',
-                    message: 'Try adjusting your filters',
-                  )
-                : _buildActivitiesList(),
-          ),
-        ],
-      ),
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00897B)),
+            )
+          : Column(
+              children: [
+                _buildSearchAndFilter(),
+                _buildCategoryFilter(),
+                Expanded(
+                  child: _filteredActivities.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.local_activity_outlined,
+                          title: 'No Activities Found',
+                          message: 'Try adjusting your filters',
+                        )
+                      : _buildActivitiesList(),
+                ),
+              ],
+            ),
     );
   }
 
@@ -616,9 +627,7 @@ class _ActivitiesState extends State<Activities> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
           SnackbarHelper.showInfo(context, 'Activity details coming soon!');
@@ -702,18 +711,32 @@ class _ActivitiesState extends State<Activities> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         activity['location'],
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
                       ),
                       const Spacer(),
-                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         activity['duration'],
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -737,8 +760,9 @@ class _ActivitiesState extends State<Activities> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: _getDifficultyColor(activity['difficulty'])
-                              .withOpacity(0.1),
+                          color: _getDifficultyColor(
+                            activity['difficulty'],
+                          ).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -762,10 +786,7 @@ class _ActivitiesState extends State<Activities> {
                       ),
                       Text(
                         ' (${activity['reviews']} reviews)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       const Spacer(),
                       Text(

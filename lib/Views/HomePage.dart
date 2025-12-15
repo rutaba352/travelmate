@@ -11,6 +11,7 @@ import 'package:travelmate/Views/TouristSpotsList.dart';
 import 'package:travelmate/Views/HotelList.dart';
 
 import '../Services/location/location_storage.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -55,6 +56,7 @@ class HomePageState extends State<HomePage> {
 
     try {
       await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
       bool simulateError = false;
 
       if (simulateError) {
@@ -66,10 +68,12 @@ class HomePageState extends State<HomePage> {
         hasError = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        hasError = true;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          hasError = true;
+        });
+      }
       if (mounted) {
         SnackbarHelper.showError(
           context,
@@ -82,26 +86,21 @@ class HomePageState extends State<HomePage> {
     int attempts = 0;
     while (LocationStorage.userLocation == null && attempts < 5) {
       await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
       attempts++;
     }
 
-    String defaultCity = "Lahore"; // Default fallback
-
-    if (LocationStorage.userLocation != null) {
+    if (LocationStorage.userLocation != null && mounted) {
       try {
-        String address = await _getAddressFromLatLng(LocationStorage.userLocation!);
+        String address = await _getAddressFromLatLng(
+          LocationStorage.userLocation!,
+        );
         if (mounted && address.isNotEmpty) {
           startLocationController.text = address;
-        } else {
-          startLocationController.text = defaultCity; // Fallback to Lahore
         }
       } catch (e) {
         print("Failed to get address: $e");
-        startLocationController.text = defaultCity; // Fallback to Lahore
       }
-    } else {
-      // No location stored at all
-      startLocationController.text = defaultCity;
     }
   }
 
@@ -129,7 +128,8 @@ class HomePageState extends State<HomePage> {
         builder: (context) => SearchResults(
           startLocation: startLocationController.text,
           destination: destinationController.text,
-          query: '${startLocationController.text} to ${destinationController.text}',
+          query:
+              '${startLocationController.text} to ${destinationController.text}',
         ),
       ),
     ).then((_) {
@@ -146,8 +146,8 @@ class HomePageState extends State<HomePage> {
   Future<String> _getAddressFromLatLng(LatLng latLng) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
-          latLng.latitude,
-          latLng.longitude
+        latLng.latitude,
+        latLng.longitude,
       );
       Placemark place = placemarks.first;
       return "${place.locality}, ${place.country}";
@@ -221,7 +221,9 @@ class HomePageState extends State<HomePage> {
                           buttonText: 'Explore Now',
                           onButtonPressed: () {
                             SnackbarHelper.showInfo(
-                                context, 'Opening explore page...');
+                              context,
+                              'Opening explore page...',
+                            );
                           },
                         )
                       else

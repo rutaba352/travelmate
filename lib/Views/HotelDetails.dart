@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Views/MapView.dart';
+import 'package:travelmate/Services/BookingService.dart';
 
 class HotelDetails extends StatefulWidget {
   final Map<String, dynamic>? hotelData;
@@ -117,15 +118,14 @@ class _HotelDetailsState extends State<HotelDetails>
   }
 
   void _getDirections() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => MapView(
-        tripTitle: widget.hotelData?['name'] ?? 'Hotel Location',
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            MapView(tripTitle: widget.hotelData?['name'] ?? 'Hotel Location'),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _selectCheckInDate() async {
     final DateTime? picked = await showDatePicker(
@@ -136,9 +136,7 @@ class _HotelDetailsState extends State<HotelDetails>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF00897B),
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF00897B)),
           ),
           child: child!,
         );
@@ -158,9 +156,7 @@ class _HotelDetailsState extends State<HotelDetails>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF00897B),
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF00897B)),
           ),
           child: child!,
         );
@@ -222,12 +218,42 @@ class _HotelDetailsState extends State<HotelDetails>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.pop(context);
-                      SnackbarHelper.showSuccess(
-                        context,
-                        'Booking confirmed! Check your email for details.',
+
+                      final bookingData = Map<String, dynamic>.from(
+                        widget.hotelData ?? {},
                       );
+                      bookingData['checkIn'] = _checkInDate.toString().split(
+                        ' ',
+                      )[0];
+                      bookingData['checkOut'] = _checkOutDate.toString().split(
+                        ' ',
+                      )[0];
+                      bookingData['guests'] = _numberOfGuests;
+                      bookingData['rooms'] = _numberOfRooms;
+                      bookingData['totalPrice'] =
+                          450; // Placeholder calculation or extract
+                      bookingData['category'] = 'Hotels';
+                      bookingData['date'] = DateTime.now().toString().split(
+                        ' ',
+                      )[0];
+
+                      final success = await BookingService().createBooking(
+                        bookingData,
+                      );
+
+                      if (success) {
+                        SnackbarHelper.showSuccess(
+                          context,
+                          'Booking confirmed! Check your profile.',
+                        );
+                      } else {
+                        SnackbarHelper.showError(
+                          context,
+                          'Failed to confirm booking.',
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00897B),
@@ -272,7 +298,9 @@ class _HotelDetailsState extends State<HotelDetails>
             style: TextStyle(
               fontSize: isTotal ? 20 : 15,
               fontWeight: FontWeight.bold,
-              color: isTotal ? const Color(0xFF00897B) : const Color(0xFF263238),
+              color: isTotal
+                  ? const Color(0xFF00897B)
+                  : const Color(0xFF263238),
             ),
           ),
         ],
@@ -342,23 +370,23 @@ class _HotelDetailsState extends State<HotelDetails>
                     ),
                     child: widget.hotelData?['image'] != null
                         ? Image.asset(
-                      widget.hotelData!['image'],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Text(
-                            images[_selectedImageIndex],
-                            style: const TextStyle(fontSize: 100),
-                          ),
-                        );
-                      },
-                    )
+                            widget.hotelData!['image'],
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Text(
+                                  images[_selectedImageIndex],
+                                  style: const TextStyle(fontSize: 100),
+                                ),
+                              );
+                            },
+                          )
                         : Center(
-                      child: Text(
-                        images[_selectedImageIndex],
-                        style: const TextStyle(fontSize: 100),
-                      ),
-                    ),
+                            child: Text(
+                              images[_selectedImageIndex],
+                              style: const TextStyle(fontSize: 100),
+                            ),
+                          ),
                   ),
                   Positioned(
                     bottom: 20,
@@ -405,7 +433,8 @@ class _HotelDetailsState extends State<HotelDetails>
                   ),
                 ],
               ),
-            ),          ),
+            ),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -435,7 +464,7 @@ class _HotelDetailsState extends State<HotelDetails>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
-                          children:  [
+                          children: [
                             Icon(Icons.star, size: 20, color: Colors.amber),
                             SizedBox(width: 4),
                             Text(
@@ -444,7 +473,7 @@ class _HotelDetailsState extends State<HotelDetails>
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ),
@@ -453,15 +482,17 @@ class _HotelDetailsState extends State<HotelDetails>
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
+                      Icon(
+                        Icons.location_on,
+                        size: 18,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 4),
                       Text(
-                        widget.hotelData?['location'] ?? 'Downtown District, Paris',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey[600],
-                        ),
-                      )
+                        widget.hotelData?['location'] ??
+                            'Downtown District, Paris',
+                        style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -471,10 +502,7 @@ class _HotelDetailsState extends State<HotelDetails>
                       const SizedBox(width: 4),
                       Text(
                         '+33 1 23 45 67 89',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 15, color: Colors.grey[600]),
                       ),
                       const SizedBox(width: 16),
                       TextButton.icon(
@@ -520,22 +548,15 @@ class _HotelDetailsState extends State<HotelDetails>
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildGuestSelector(),
-                      ),
+                      Expanded(child: _buildGuestSelector()),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildRoomSelector(),
-                      ),
+                      Expanded(child: _buildRoomSelector()),
                     ],
                   ),
                   const SizedBox(height: 24),
                   const Text(
                     'Starting from',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -631,7 +652,7 @@ class _HotelDetailsState extends State<HotelDetails>
     );
   }
 
- // PART 2 STARTS HERE - Paste this below Part 1
+  // PART 2 STARTS HERE - Paste this below Part 1
 
   Widget _buildDateSelector(String label, DateTime? date, VoidCallback onTap) {
     return GestureDetector(
@@ -648,10 +669,7 @@ class _HotelDetailsState extends State<HotelDetails>
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             const SizedBox(height: 4),
             Text(
@@ -683,10 +701,7 @@ class _HotelDetailsState extends State<HotelDetails>
         children: [
           Text(
             'Guests',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
           Row(
@@ -742,10 +757,7 @@ class _HotelDetailsState extends State<HotelDetails>
         children: [
           Text(
             'Rooms',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
           Row(
@@ -792,7 +804,7 @@ class _HotelDetailsState extends State<HotelDetails>
     // Get amenities from hotelData or use default
     final List<String> hotelAmenities =
         widget.hotelData?['amenities']?.cast<String>() ??
-            amenities.map((a) => a['name'] as String).toList();
+        amenities.map((a) => a['name'] as String).toList();
 
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -837,6 +849,7 @@ class _HotelDetailsState extends State<HotelDetails>
       },
     );
   }
+
   Widget _buildRoomsTab() {
     return ListView.builder(
       itemCount: roomTypes.length,
@@ -998,4 +1011,3 @@ class _HotelDetailsState extends State<HotelDetails>
     );
   }
 }
-

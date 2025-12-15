@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
+import 'package:travelmate/Services/SavedItemsService.dart';
 
 class Dining extends StatefulWidget {
   final String? cityName;
@@ -75,7 +76,8 @@ class _DiningState extends State<Dining> {
             'priceRange': 'PKR 2,000',
             'rating': 4.8,
             'reviews': 1250,
-            'description': 'Historic restaurant in the heart of Old Lahore with rooftop dining and traditional Pakistani cuisine',
+            'description':
+                'Historic restaurant in the heart of Old Lahore with rooftop dining and traditional Pakistani cuisine',
             'features': ['Rooftop', 'Traditional Music', 'Historical Setting'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -91,7 +93,8 @@ class _DiningState extends State<Dining> {
             'priceRange': 'PKR 1,500',
             'rating': 4.7,
             'reviews': 2100,
-            'description': 'Famous for authentic Pakistani BBQ and traditional dishes. Family-friendly atmosphere',
+            'description':
+                'Famous for authentic Pakistani BBQ and traditional dishes. Family-friendly atmosphere',
             'features': ['BBQ Specialist', 'Family Dining', 'Takeout'],
             'deliveryAvailable': true,
             'isSaved': false,
@@ -107,7 +110,8 @@ class _DiningState extends State<Dining> {
             'priceRange': 'PKR 3,500',
             'rating': 4.9,
             'reviews': 890,
-            'description': 'Upscale Pakistani dining with modern presentation and traditional flavors',
+            'description':
+                'Upscale Pakistani dining with modern presentation and traditional flavors',
             'features': ['Fine Dining', 'Private Rooms', 'Valet Parking'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -125,7 +129,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$150',
             'rating': 4.9,
             'reviews': 3200,
-            'description': 'Michelin-starred restaurant in the Eiffel Tower with stunning views and exquisite French cuisine',
+            'description':
+                'Michelin-starred restaurant in the Eiffel Tower with stunning views and exquisite French cuisine',
             'features': ['Michelin Star', 'Eiffel Tower View', 'Dress Code'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -141,7 +146,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$40',
             'rating': 4.6,
             'reviews': 5600,
-            'description': 'Historic Parisian café serving classic French breakfast, coffee, and light meals',
+            'description':
+                'Historic Parisian café serving classic French breakfast, coffee, and light meals',
             'features': ['Historic', 'Outdoor Seating', 'Coffee Specialist'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -159,7 +165,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$300',
             'rating': 5.0,
             'reviews': 1800,
-            'description': 'World-famous 3-Michelin-star sushi restaurant. Reservation required months in advance',
+            'description':
+                'World-famous 3-Michelin-star sushi restaurant. Reservation required months in advance',
             'features': ['3 Michelin Stars', 'Omakase Only', 'Master Chef'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -175,7 +182,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$12',
             'rating': 4.7,
             'reviews': 8900,
-            'description': 'Famous ramen chain with private booths and customizable tonkotsu ramen',
+            'description':
+                'Famous ramen chain with private booths and customizable tonkotsu ramen',
             'features': ['Solo Dining Booths', 'Open 24/7', 'Fast Service'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -193,7 +201,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$25',
             'rating': 4.8,
             'reviews': 4300,
-            'description': 'Michelin-starred street food. Famous for crab omelette and drunken noodles',
+            'description':
+                'Michelin-starred street food. Famous for crab omelette and drunken noodles',
             'features': ['Michelin Star', 'Street Food', 'Long Queues'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -209,7 +218,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$80',
             'rating': 4.9,
             'reviews': 2100,
-            'description': 'Upscale Thai restaurant with traditional royal recipes and modern presentation',
+            'description':
+                'Upscale Thai restaurant with traditional royal recipes and modern presentation',
             'features': ['Fine Dining', 'Traditional Recipes', 'Wine Pairing'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -227,7 +237,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$200',
             'rating': 4.9,
             'reviews': 1900,
-            'description': 'Underwater restaurant in Burj Al Arab with floor-to-ceiling aquarium views',
+            'description':
+                'Underwater restaurant in Burj Al Arab with floor-to-ceiling aquarium views',
             'features': ['Underwater Dining', 'Luxury', 'Aquarium Views'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -243,8 +254,13 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$35',
             'rating': 4.6,
             'reviews': 3400,
-            'description': 'Authentic Emirati cuisine in a heritage building with traditional courtyard',
-            'features': ['Traditional', 'Courtyard Seating', 'Cultural Experience'],
+            'description':
+                'Authentic Emirati cuisine in a heritage building with traditional courtyard',
+            'features': [
+              'Traditional',
+              'Courtyard Seating',
+              'Cultural Experience',
+            ],
             'deliveryAvailable': true,
             'isSaved': false,
           },
@@ -261,7 +277,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$90',
             'rating': 4.8,
             'reviews': 2800,
-            'description': 'Rooftop restaurant with panoramic views of Istanbul and modern Turkish cuisine',
+            'description':
+                'Rooftop restaurant with panoramic views of Istanbul and modern Turkish cuisine',
             'features': ['Rooftop', 'City Views', 'Modern Cuisine'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -279,7 +296,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$70',
             'rating': 4.9,
             'reviews': 1600,
-            'description': 'Award-winning restaurant using local Balinese ingredients with innovative techniques',
+            'description':
+                'Award-winning restaurant using local Balinese ingredients with innovative techniques',
             'features': ['Farm to Table', 'Tasting Menu', 'Local Ingredients'],
             'deliveryAvailable': false,
             'isSaved': false,
@@ -295,7 +313,8 @@ class _DiningState extends State<Dining> {
             'priceRange': '\$8',
             'rating': 4.7,
             'reviews': 5200,
-            'description': 'Local favorite for authentic Balinese dishes. Best nasi campur on the island',
+            'description':
+                'Local favorite for authentic Balinese dishes. Best nasi campur on the island',
             'features': ['Local Favorite', 'Budget Friendly', 'Authentic'],
             'deliveryAvailable': true,
             'isSaved': false,
@@ -315,10 +334,12 @@ class _DiningState extends State<Dining> {
             .toLowerCase()
             .contains(_searchController.text.toLowerCase());
 
-        final matchesCategory = _selectedCategory == 'All' ||
+        final matchesCategory =
+            _selectedCategory == 'All' ||
             restaurant['category'] == _selectedCategory;
 
-        final matchesLocation = _selectedLocation == 'All' ||
+        final matchesLocation =
+            _selectedLocation == 'All' ||
             restaurant['location'] == _selectedLocation;
 
         return matchesSearch && matchesCategory && matchesLocation;
@@ -392,7 +413,7 @@ class _DiningState extends State<Dining> {
                         child: Center(
                           child: Image.asset(
                             restaurant['image'], // Use the image path string
-                            width: 50,  // Adjust size as needed
+                            width: 50, // Adjust size as needed
                             height: 50,
                           ),
                         ),
@@ -424,24 +445,28 @@ class _DiningState extends State<Dining> {
                   ),
                   const SizedBox(height: 25),
                   _buildInfoRow(
-                      Icons.location_on, 'Location', restaurant['location']),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(Icons.attach_money, 'Average Price',
-                      restaurant['priceRange']),
+                    Icons.location_on,
+                    'Location',
+                    restaurant['location'],
+                  ),
                   const SizedBox(height: 12),
                   _buildInfoRow(
-                      Icons.delivery_dining,
-                      'Delivery',
-                      restaurant['deliveryAvailable']
-                          ? 'Available'
-                          : 'Dine-in Only'),
+                    Icons.attach_money,
+                    'Average Price',
+                    restaurant['priceRange'],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    Icons.delivery_dining,
+                    'Delivery',
+                    restaurant['deliveryAvailable']
+                        ? 'Available'
+                        : 'Dine-in Only',
+                  ),
                   const SizedBox(height: 25),
                   const Text(
                     'Select Date & Time',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 15),
                   Row(
@@ -455,8 +480,11 @@ class _DiningState extends State<Dining> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_today,
-                                  color: Color(0xFF00897B), size: 20),
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Color(0xFF00897B),
+                                size: 20,
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 'Tomorrow',
@@ -479,8 +507,11 @@ class _DiningState extends State<Dining> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.access_time,
-                                  color: Color(0xFF00897B), size: 20),
+                              const Icon(
+                                Icons.access_time,
+                                color: Color(0xFF00897B),
+                                size: 20,
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 '7:00 PM',
@@ -498,10 +529,7 @@ class _DiningState extends State<Dining> {
                   const SizedBox(height: 20),
                   const Text(
                     'Number of Guests',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 15),
                   Row(
@@ -538,10 +566,7 @@ class _DiningState extends State<Dining> {
                   const SizedBox(height: 20),
                   const Text(
                     'Special Requests (Optional)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 15),
                   TextField(
@@ -554,8 +579,7 @@ class _DiningState extends State<Dining> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                        const BorderSide(color: Color(0xFF00897B)),
+                        borderSide: const BorderSide(color: Color(0xFF00897B)),
                       ),
                     ),
                   ),
@@ -563,12 +587,33 @@ class _DiningState extends State<Dining> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context);
-                        SnackbarHelper.showSuccess(
-                          context,
-                          'Table reserved at ${restaurant['name']}!',
+
+                        final bookingData = Map<String, dynamic>.from(
+                          restaurant,
                         );
+                        bookingData['category'] = 'Restaurant';
+                        bookingData['date'] = DateTime.now()
+                            .add(const Duration(days: 1))
+                            .toString()
+                            .split(' ')[0];
+
+                        final success = await SavedItemsService().bookItem(
+                          bookingData,
+                        );
+
+                        if (success) {
+                          SnackbarHelper.showSuccess(
+                            context,
+                            'Table reserved at ${restaurant['name']}!',
+                          );
+                        } else {
+                          SnackbarHelper.showError(
+                            context,
+                            'Failed to reserve table.',
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00897B),
@@ -603,19 +648,13 @@ class _DiningState extends State<Dining> {
         const SizedBox(width: 10),
         Text(
           '$label:',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -643,25 +682,23 @@ class _DiningState extends State<Dining> {
       ),
       body: _isLoading
           ? const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF00897B),
-        ),
-      )
-          : Column(
-        children: [
-          _buildSearchAndFilter(),
-          _buildLocationFilter(),
-          Expanded(
-            child: _filteredRestaurants.isEmpty
-                ? const EmptyState(
-              icon: Icons.restaurant_outlined,
-              title: 'No Restaurants Found',
-              message: 'Try adjusting your filters',
+              child: CircularProgressIndicator(color: Color(0xFF00897B)),
             )
-                : _buildRestaurantsList(),
-          ),
-        ],
-      ),
+          : Column(
+              children: [
+                _buildSearchAndFilter(),
+                _buildLocationFilter(),
+                Expanded(
+                  child: _filteredRestaurants.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.restaurant_outlined,
+                          title: 'No Restaurants Found',
+                          message: 'Try adjusting your filters',
+                        )
+                      : _buildRestaurantsList(),
+                ),
+              ],
+            ),
     );
   }
 
@@ -677,12 +714,12 @@ class _DiningState extends State<Dining> {
           prefixIcon: const Icon(Icons.search, color: Color(0xFF00897B)),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () {
-              _searchController.clear();
-              _filterRestaurants();
-            },
-          )
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterRestaurants();
+                  },
+                )
               : null,
           filled: true,
           fillColor: Colors.grey[100],
@@ -735,8 +772,12 @@ class _DiningState extends State<Dining> {
                     backgroundColor: Colors.grey[100],
                     selectedColor: const Color(0xFF00897B).withOpacity(0.2),
                     labelStyle: TextStyle(
-                      color: isSelected ? const Color(0xFF00897B) : Colors.grey[700],
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? const Color(0xFF00897B)
+                          : Colors.grey[700],
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       fontSize: 12,
                     ),
                     checkmarkColor: const Color(0xFF00897B),
@@ -801,9 +842,7 @@ class _DiningState extends State<Dining> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
           SnackbarHelper.showInfo(context, 'Restaurant details coming soon!');
@@ -884,8 +923,11 @@ class _DiningState extends State<Dining> {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.delivery_dining,
-                              size: 16, color: Colors.white),
+                          Icon(
+                            Icons.delivery_dining,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                           SizedBox(width: 4),
                           Text(
                             'Delivery',
@@ -932,23 +974,22 @@ class _DiningState extends State<Dining> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined,
-                          size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${restaurant['location']}, ${restaurant['country']}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.star,
-                          size: 16, color: Colors.amber[700]),
+                      Icon(Icons.star, size: 16, color: Colors.amber[700]),
                       const SizedBox(width: 4),
                       Text(
                         restaurant['rating'].toString(),
@@ -961,20 +1002,14 @@ class _DiningState extends State<Dining> {
                       const SizedBox(width: 4),
                       Text(
                         '(${restaurant['reviews']} reviews)',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     restaurant['description'],
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),

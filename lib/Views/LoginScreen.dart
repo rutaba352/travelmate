@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:travelmate/Services/Auth/AuthException.dart';
 import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
-import 'package:travelmate/main.dart';
 import 'package:travelmate/Views/Register.dart';
+import 'package:travelmate/Views/MainNavigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -74,10 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } on InvalidEmailAuthException {
         setState(() => _isLoading = false);
         if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            'Invalid email format.',
-          );
+          SnackbarHelper.showError(context, 'Invalid email format.');
         }
       } on GenericAuthException {
         setState(() => _isLoading = false);
@@ -107,7 +104,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         setState(() => _isLoading = false);
-        SnackbarHelper.showSuccess(context, 'Signed in with Google successfully!');
+        SnackbarHelper.showSuccess(
+          context,
+          'Signed in with Google successfully!',
+        );
 
         // Navigate to home
         Navigator.pushReplacement(
@@ -228,10 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Sign in to continue your journey',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
 
@@ -385,8 +382,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -474,10 +472,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         'Don\'t have an account? ',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                       TextButton(
                         onPressed: _handleSignUp,

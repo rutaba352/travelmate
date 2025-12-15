@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Services/Auth/AuthServices.dart';
-import 'package:travelmate/Views/Explore.dart';
-import 'package:travelmate/Views/HomePage.dart';
-import 'package:travelmate/Views/Profile.dart';
-import 'package:travelmate/Views/Saved.dart';
 import 'package:travelmate/Views/SplashScreen.dart';
 import 'package:travelmate/Utilities/AppNavigator (1).dart';
 
+// Removed unused MainNavigation import as per lint, but ensuring check.
+// If AppNavigator references routes that use MainNavigation internally logic wise, fine.
+// But as per lint MainNavigation is unused in main.dart itself.
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   final authService = AuthService.firebase();
   await authService.initialize();
-  
+
   runApp(const TravelMate());
 }
 
@@ -42,63 +41,6 @@ class TravelMate extends StatelessWidget {
       initialRoute: '/',
       onGenerateRoute: AppNavigator.generateRoute,
       home: const SplashScreen(),
-    );
-  }
-}
-
-class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
-
-  @override
-  State<MainNavigation> createState() => _MainNavigationState();
-}
-
-class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _views = const [
-    HomePage(),
-    Explore(),
-    Saved(),
-    Profile(),
-  ];
-
-  void _onNavTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _views[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onNavTapped,
-        selectedItemColor: const Color(0xFF00897B),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore),
-            label: 'Explore',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Saved',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
     );
   }
 }

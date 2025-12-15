@@ -44,13 +44,15 @@ class _MapViewState extends State<MapView> {
     if (widget.selectedHotel != null) {
       _selectedLocation = widget.selectedHotel!.toLatLng();
       // Clear all markers and add only the selected hotel
-      _markers = [{
-        'lat': widget.selectedHotel!.lat,
-        'lng': widget.selectedHotel!.lng,
-        'label': '★',
-        'color': 'red',
-        'name': widget.selectedHotel!.name,
-      }];
+      _markers = [
+        {
+          'lat': widget.selectedHotel!.lat,
+          'lng': widget.selectedHotel!.lng,
+          'label': '★',
+          'color': 'red',
+          'name': widget.selectedHotel!.name,
+        },
+      ];
     } else if (widget.initialLocation != null) {
       _selectedLocation = widget.initialLocation;
     } else {
@@ -71,7 +73,9 @@ class _MapViewState extends State<MapView> {
     try {
       // Use Nominatim API for geocoding
       final response = await http.get(
-        Uri.parse('https://nominatim.openstreetmap.org/search?format=json&q=$query&limit=1'),
+        Uri.parse(
+          'https://nominatim.openstreetmap.org/search?format=json&q=$query&limit=1',
+        ),
         headers: {'User-Agent': 'TravelMateApp/1.0'},
       );
 
@@ -127,7 +131,9 @@ class _MapViewState extends State<MapView> {
   // Remove the old _loadMapData and replace with:
   Future<void> _loadMapData() async {
     try {
-      final String response = await rootBundle.loadString('assets/map_data.json');
+      final String response = await rootBundle.loadString(
+        'assets/map_data.json',
+      );
       final data = json.decode(response);
 
       // Only load markers if no hotel is selected
@@ -213,11 +219,15 @@ class _MapViewState extends State<MapView> {
     // Clear existing markers
     _markers.clear();
 
-    // Get all hotels from service
-    final allHotels = HotelService.getAllHotels();
+    // Get all hotels from service (Static for map initially)
+    final allHotels = HotelService.getStaticHotels();
 
     // Filter hotels near current location (within 50km radius)
     final nearbyHotels = allHotels.where((hotel) {
+      // Exclude selected if any
+      if (widget.selectedHotel != null && hotel.id == widget.selectedHotel!.id)
+        return false;
+
       final distance = _calculateDistance(
         _selectedLocation!.latitude,
         _selectedLocation!.longitude,
@@ -247,7 +257,8 @@ class _MapViewState extends State<MapView> {
     if (_selectedLocation == null) return;
 
     try {
-      final query = '''
+      final query =
+          '''
         [out:json];
         node
           ["tourism"~"attraction|museum|gallery"]
@@ -293,9 +304,11 @@ class _MapViewState extends State<MapView> {
         final end = _markers[1];
 
         final response = await http.get(
-          Uri.parse('https://router.project-osrm.org/route/v1/driving/'
-              '${start['lng']},${start['lat']};${end['lng']},${end['lat']}'
-              '?overview=full&geometries=geojson'),
+          Uri.parse(
+            'https://router.project-osrm.org/route/v1/driving/'
+            '${start['lng']},${start['lat']};${end['lng']},${end['lat']}'
+            '?overview=full&geometries=geojson',
+          ),
         );
 
         if (response.statusCode == 200) {
@@ -304,7 +317,7 @@ class _MapViewState extends State<MapView> {
 
           setState(() {
             _routePoints = List<LatLng>.from(
-                geometry.map((coord) => LatLng(coord[1], coord[0]))
+              geometry.map((coord) => LatLng(coord[1], coord[0])),
             );
           });
         }
@@ -315,22 +328,27 @@ class _MapViewState extends State<MapView> {
   }
 
   // Helper method to calculate distance
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
     const p = 0.017453292519943295;
-    final a = 0.5 - cos((lat2 - lat1) * p) / 2 +
+    final a =
+        0.5 -
+        cos((lat2 - lat1) * p) / 2 +
         cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
     return 12742 * asin(sqrt(a)); // 2 * R * asin(sqrt(a))
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Map - Paris Vacation',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.teal.shade600,
         elevation: 0,
@@ -372,19 +390,12 @@ class _MapViewState extends State<MapView> {
                 ),
 
               // Markers Layer
-              MarkerLayer(
-                markers: _buildOSMMarkers(),
-              ),
+              MarkerLayer(markers: _buildOSMMarkers()),
             ],
           ),
 
           // Search Bar
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: _buildSearchBar(),
-          ),
+          Positioned(top: 16, left: 16, right: 16, child: _buildSearchBar()),
 
           // View Selector
           Positioned(
@@ -429,12 +440,7 @@ class _MapViewState extends State<MapView> {
             ),
 
           // Info Card
-          Positioned(
-            bottom: 16,
-            left: 16,
-            right: 16,
-            child: _buildInfoCard(),
-          ),
+          Positioned(bottom: 16, left: 16, right: 16, child: _buildInfoCard()),
         ],
       ),
       floatingActionButton: Column(
@@ -442,7 +448,10 @@ class _MapViewState extends State<MapView> {
         children: [
           FloatingActionButton(
             onPressed: () {
-              _mapController.move(_selectedLocation ?? const LatLng(48.8566, 2.3522), 15.0);
+              _mapController.move(
+                _selectedLocation ?? const LatLng(48.8566, 2.3522),
+                15.0,
+              );
             },
             backgroundColor: Colors.teal,
             mini: true,
@@ -451,7 +460,10 @@ class _MapViewState extends State<MapView> {
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
-              _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1);
+              _mapController.move(
+                _mapController.camera.center,
+                _mapController.camera.zoom + 1,
+              );
             },
             backgroundColor: Colors.teal,
             mini: true,
@@ -460,7 +472,10 @@ class _MapViewState extends State<MapView> {
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
-              _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1);
+              _mapController.move(
+                _mapController.camera.center,
+                _mapController.camera.zoom - 1,
+              );
             },
             backgroundColor: Colors.teal,
             mini: true,
@@ -474,9 +489,7 @@ class _MapViewState extends State<MapView> {
   Widget _buildSearchBar() {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(30),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -511,7 +524,8 @@ class _MapViewState extends State<MapView> {
           marker['lat'] ?? _selectedLocation!.latitude,
           marker['lng'] ?? _selectedLocation!.longitude,
         ),
-        child: Column(  // Change this line from "builder: (ctx) =>" to "child:"
+        child: Column(
+          // Change this line from "builder: (ctx) =>" to "child:"
           children: [
             Container(
               width: 40,
@@ -604,9 +618,7 @@ class _MapViewState extends State<MapView> {
 
     return Card(
       elevation: 8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -640,16 +652,16 @@ class _MapViewState extends State<MapView> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.directions_car,
-                          size: 14, color: Colors.teal.shade600),
+                      Icon(
+                        Icons.directions_car,
+                        size: 14,
+                        color: Colors.teal.shade600,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         distance,

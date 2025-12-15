@@ -1,36 +1,29 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 
 class DestinationApi {
-  static Future<List<String>> getCitySuggestions(String query) async {
-    // Simulate API delay
-    await Future.delayed(const Duration(milliseconds: 300));
+  static Future<List<String>> getPlaceSuggestions(String query) async {
+    if (query.isEmpty) return [];
 
-    // Mock data - you can replace with real API later
-    final allCities = [
-      "Paris, France",
-      "Tokyo, Japan",
-      "London, UK",
-      "New York, USA",
-      "Bangkok, Thailand",
-      "Dubai, UAE",
-      "Singapore",
-      "Sydney, Australia",
-      "Rome, Italy",
-      "Barcelona, Spain",
-      "Istanbul, Turkey",
-      "Bali, Indonesia",
-      "Switzerland, Europe",
-      "Iceland, Nordic",
-      "Cancun, Mexico",
-      "Maldives",
-      "Amsterdam, Netherlands",
-      "Barcelona, Spain",
-      "Vienna, Austria",
-      "Prague, Czech Republic"
-    ];
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5'
+        ),
+        headers: {'User-Agent': 'TravelMateApp/1.0'}, // Required by Nominatim
+      );
 
-    return allCities
-        .where((city) => city.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((place) {
+          return place['display_name'] as String;
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 }

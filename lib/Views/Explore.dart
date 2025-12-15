@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import '../Services/location/destination_api.dart';
 
@@ -38,6 +41,9 @@ class _ExploreState extends State<Explore> {
   final List<String> _categories = [
     'All', 'Adventure', 'Beach', 'Culture', 'Food', 'Nature', 'Historical'
   ];
+
+  List<Map<String, dynamic>> _apiDestinations = [];
+  bool _isSearchingAPI = false;
 
   // ============ DESTINATION DATA ============
   // Complete list of destinations (Pakistani + International)
@@ -241,16 +247,34 @@ class _ExploreState extends State<Explore> {
     super.dispose();
   }
 
-  // ============ SEARCH LOGIC ============
 
-  /// Handles search text changes with debouncing
-  /// Debouncing = Wait until user stops typing before searching
+  Map<String, dynamic>? _findLocalDestination(String apiPlaceName) {
+    // Clean the API name (remove country/region part)
+    final cleanedName = apiPlaceName.split(',')[0].trim();
+
+    // Search in your hardcoded destinations
+    for (var dest in _destinations) {
+      final destName = dest['name'].toString().toLowerCase();
+
+      // Check multiple matching strategies
+      if (destName.contains(cleanedName.toLowerCase()) ||
+          apiPlaceName.toLowerCase().contains(destName) ||
+          cleanedName.toLowerCase().contains(destName)) {
+        return dest;
+      }
+    }
+
+    return null;
+  }
+
   void _onSearchChanged(String query) {
-    _debounceTimer?.cancel(); // Cancel previous timer
+    _debounceTimer?.cancel();
 
     if (query.isEmpty) {
       _removeSuggestionOverlay();
-      setState(() {});
+      setState(() {
+        _apiDestinations = [];
+      });
       return;
     }
 
@@ -259,15 +283,39 @@ class _ExploreState extends State<Explore> {
       return;
     }
 
-    // Create new timer - only fires if user stops typing for 300ms
-    _debounceTimer = Timer(_debounceDelay, () => _fetchSuggestions(query));
+    _debounceTimer = Timer(_debounceDelay, () {
+      _fetchAPIDestinations(query); // New method
+    });
+  }
+
+  Future<void> _fetchAPIDestinations(String query) async {
+    setState(() => _isSearchingAPI = true);
+
+    final suggestions = await DestinationApi.getPlaceSuggestions(query);
+
+    if (mounted) {
+      // Convert API suggestions to destination format
+      _apiDestinations = suggestions.map((placeName) {
+        // First check if it exists in hardcoded data
+        final localDest = _findLocalDestination(placeName);
+        if (localDest != null) return localDest;
+
+        // Otherwise create fallback
+        return _createFallbackDestination(placeName);
+      }).toList();
+
+      setState(() {
+        _isLoadingSuggestions = false;
+        _isSearchingAPI = false;
+      });
+    }
   }
 
   /// Fetches city suggestions from API based on search query
   Future<void> _fetchSuggestions(String query) async {
     setState(() => _isLoadingSuggestions = true);
 
-    final suggestions = await DestinationApi.getCitySuggestions(query);
+    final suggestions = await DestinationApi.getPlaceSuggestions(query);
 
     if (mounted) {
       setState(() {
@@ -283,19 +331,143 @@ class _ExploreState extends State<Explore> {
     }
   }
 
+  Map<String, dynamic> _createFallbackDestination(String apiPlaceName) {
+    final parts = apiPlaceName.split(',');
+    final city = parts[0].trim();
+    final country = parts.length > 1 ? parts[1].trim() : 'Unknown';
+
+    // Determine category
+    String determineCategory() {
+      final lowerName = apiPlaceName.toLowerCase();
+      if (lowerName.contains('beach') || lowerName.contains('island') || lowerName.contains('sea')) return 'Beach';
+      if (lowerName.contains('mountain') || lowerName.contains('valley') || lowerName.contains('lake')) return 'Nature';
+      if (lowerName.contains('museum') || lowerName.contains('temple') || lowerName.contains('mosque')) return 'Culture';
+      if (lowerName.contains('park') || lowerName.contains('forest') || lowerName.contains('garden')) return 'Nature';
+      if (lowerName.contains('food') || lowerName.contains('restaurant')) return 'Food';
+      if (lowerName.contains('fort') || lowerName.contains('castle') || lowerName.contains('ancient')) return 'Historical';
+      return 'Culture';
+    }
+
+    // Get appropriate image based on category
+    String getCategoryImage(String category) {
+      switch(category.toLowerCase()) {
+        case 'beach': return 'assets/images/maldives.jpg';
+        case 'nature': return 'assets/images/hunza.jpg';
+        case 'adventure': return 'assets/images/skardu.jpg';
+        case 'culture': return 'assets/images/lahore.jpg';
+        case 'historical': return 'assets/images/mohenjo_daro.jpg';
+        case 'food': return 'assets/images/bangkok.jpg';
+        default: return 'assets/images/placeholder.jpg';
+      }
+    }
+
+    final category = determineCategory();
+
+    return {
+      'name': city,
+      'country': country,
+      'image': getCategoryImage(category),
+      'category': category,
+      'rating': (4.0 + Random().nextDouble()).toStringAsFixed(1),
+      'description': 'Explore the beautiful $city in $country. Experience local culture, attractions, and cuisine.',
+      'price': 'PKR ${(15000 + Random().nextInt(300000)).toStringAsFixed(0)}',
+      'highlights': _generateHighlights(category),
+      'isFallback': true,
+    };
+  }
+
+// Helper for dynamic highlights
+  String _generateHighlights(String category) {
+    switch(category) {
+      case 'Beach': return 'Beaches, Water sports, Sunsets';
+      case 'Nature': return 'Scenic views, Hiking, Photography';
+      case 'Adventure': return 'Trekking, Camping, Activities';
+      case 'Culture': return 'Local culture, Food, Markets';
+      case 'Historical': return 'Ancient sites, Museums, Heritage';
+      case 'Food': return 'Local cuisine, Street food, Restaurants';
+      default: return 'Attractions, Culture, Sightseeing';
+    }
+  }
+
+  Widget _buildCityPlaceholder(String cityName, String category) {
+    // Color scheme based on category
+    final Map<String, Color> categoryColors = {
+      'Beach': Color(0xFF4FC3F7), // Light Blue
+      'Nature': Color(0xFF81C784), // Green
+      'Adventure': Color(0xFF7986CB), // Indigo
+      'Culture': Color(0xFFBA68C8), // Purple
+      'Historical': Color(0xFF4DB6AC), // Teal
+      'Food': Color(0xFFFF8A65), // Orange
+    };
+
+    final color = categoryColors[category] ?? Color(0xFF00897B);
+    final initial = cityName.isNotEmpty ? cityName[0].toUpperCase() : 'T';
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color, color.withOpacity(0.7)],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              initial,
+              style: TextStyle(
+                fontSize: 42,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              cityName.length > 12 ? '${cityName.substring(0, 10)}...' : cityName,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Handles when user taps a suggestion
-  void _onSuggestionTap(String cityName) {
-    _searchController.text = cityName;
+  void _onSuggestionTap(String placeName) {
+    _searchController.text = placeName;
     _removeSuggestionOverlay();
-    setState(() => _suggestions = []);
-    SnackbarHelper.showInfo(context, 'Searching for $cityName...');
+
+    // Try to find in hardcoded data
+    final localDest = _findLocalDestination(placeName);
+
+    if (localDest != null) {
+      // Found in hardcoded data - show your rich destination
+      _bookDestination(localDest);
+    } else {
+      // Not in hardcoded data - show basic info
+      SnackbarHelper.showInfo(
+          context,
+          'Showing basic info for $placeName\n(Full details coming soon!)'
+      );
+      // You can navigate to a generic detail screen here
+    }
   }
 
   /// Clears search and resets UI
   void _clearSearch() {
     _searchController.clear();
     _removeSuggestionOverlay();
-    setState(() => _suggestions = []);
+    setState(() {
+      _suggestions = [];
+      _apiDestinations = [];
+    });
   }
 
   // ============ OVERLAY MANAGEMENT ============
@@ -367,19 +539,29 @@ class _ExploreState extends State<Explore> {
 
   /// Returns filtered destinations based on category and search
   List<Map<String, dynamic>> get _filteredDestinations {
-    var filtered = _destinations;
+    // If searching and we have API results, show them
+    if (_searchController.text.isNotEmpty && _apiDestinations.isNotEmpty) {
+      // Filter by category if needed
+      if (_selectedCategory != 'All') {
+        return _apiDestinations
+            .where((dest) => dest['category'] == _selectedCategory)
+            .toList();
+      }
+      return _apiDestinations;
+    }
 
-    // Step 1: Filter by category
+    // Otherwise show hardcoded destinations with original filtering
+    var filtered = _destinations;
     if (_selectedCategory != 'All') {
       filtered = filtered
           .where((dest) => dest['category'] == _selectedCategory)
           .toList();
     }
 
-    // Step 2: Filter by search text
+    // Original search filtering for hardcoded data
     if (_searchController.text.isNotEmpty) {
       final searchText = _searchController.text.toLowerCase();
-      final cityName = searchText.split(',')[0].trim(); // Handle "City, Country"
+      final cityName = searchText.split(',')[0].trim();
 
       filtered = filtered.where((dest) {
         final name = dest['name'].toString().toLowerCase();
@@ -393,7 +575,6 @@ class _ExploreState extends State<Explore> {
 
     return filtered;
   }
-
   // ============ USER ACTIONS ============
 
   /// Pull-to-refresh action
@@ -432,7 +613,7 @@ class _ExploreState extends State<Explore> {
         decoration: InputDecoration(
           hintText: 'Search destinations...',
           prefixIcon: const Icon(Icons.search),
-          suffixIcon: _isLoadingSuggestions
+          suffixIcon: _isSearchingAPI
               ? const Padding(
             padding: EdgeInsets.all(12.0),
             child: CircularProgressIndicator(strokeWidth: 2),
@@ -509,8 +690,15 @@ class _ExploreState extends State<Explore> {
     if (_searchController.text.isEmpty) return const SizedBox.shrink();
 
     final count = _filteredDestinations.length;
+
+    String source = '';
+    if (_apiDestinations.isNotEmpty && _searchController.text.isNotEmpty) {
+      source = ' (from API)';
+    } else if (_searchController.text.isNotEmpty && count > 0) {
+      source = ' (from local)';
+    }
     return Text(
-      'Showing $count result${count == 1 ? '' : 's'} for "${_searchController.text}"',
+      'Showing $count result${count == 1 ? '' : 's'}$source for "${_searchController.text}"',
       style: TextStyle(
         fontSize: 12,
         color: Colors.grey[600],
@@ -539,55 +727,21 @@ class _ExploreState extends State<Explore> {
                     top: Radius.circular(15),
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    // Background image
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(15),
-                      ),
-                      child: Image.asset(
-                        destination['image'],
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          // Fallback gradient if image not found
-                          return Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  _primaryColor.withOpacity(0.7),
-                                  _accentColor.withOpacity(0.7),
-                                ],
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.landscape,
-                                size: 50,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    // Favorite button
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.white,
-                        child: IconButton(
-                          icon: const Icon(Icons.favorite_border, size: 16),
-                          color: Colors.red,
-                          onPressed: () => _saveDestination(destination),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: destination['isFallback'] == true
+                    ? _buildCityPlaceholder(destination['name'], destination['category'])
+                    : ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                  child: Image.asset(
+                    destination['image'],
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildCityPlaceholder(destination['name'], destination['category']);
+                    },
+                  ),
                 ),
               ),
             ),
@@ -637,6 +791,23 @@ class _ExploreState extends State<Explore> {
                           color: _primaryColor,
                         ),
                       ),
+                      if (destination['isFallback'] == true)
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.blue[100]!),
+                          ),
+                          child: Text(
+                            'API',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ],

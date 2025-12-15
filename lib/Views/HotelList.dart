@@ -1,6 +1,11 @@
+import 'dart:collection';
+import 'package:travelmate/Views/MapView.dart';
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Views/HotelDetails.dart';
+
+import '../Services/location/hotel_model.dart';
+import '../Services/location/hotel_service.dart';
 
 class HotelList extends StatelessWidget {
   HotelList({super.key});
@@ -225,19 +230,33 @@ class HotelList extends StatelessWidget {
       ) {
     return InkWell(
       onTap: () {
+        // Find the hotel in HotelService by name
+        Hotel? selectedHotel;
+        try {
+          selectedHotel = HotelService.getAllHotels().firstWhere(
+                (h) => h.name.toLowerCase().contains(name.toLowerCase()),
+          );
+        } catch (e) {
+          // If hotel not found, use default coordinates
+          selectedHotel = Hotel(
+            id: '0',
+            name: name,
+            description: description,
+            location: location,
+            lat: 33.6844, // Default Pakistan coordinates
+            lng: 73.0479,
+            imagePath: imagePath,
+            rating: rating,
+            price: double.tryParse(price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0,
+          );
+        }
+
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HotelDetails(
-              hotelData: {
-                'name': name,
-                'location': location,
-                'rating': rating,
-                'price': price,
-                'amenities': amenities,
-                'description': description,
-                'image': imagePath,
-              },
+            builder: (context) => MapView(
+              tripTitle: name,
+              selectedHotel: selectedHotel, // Pass the Hotel object
             ),
           ),
         );

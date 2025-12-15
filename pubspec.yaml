@@ -17,6 +17,10 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   http: ^1.1.0
+  geocoding: ^4.0.0
+  latlong2: ^0.9.1
+  flutter_map: ^8.2.2
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +31,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/map_data.json
+    - assets/images/
+    - assets/images/tourist_spots/
+    - assets/images/hotels/
+    - assets/images/placeholder.jpg

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-
+import 'package:flutter_map/flutter_map.dart'; // Flutter Map package
+import 'package:latlong2/latlong.dart'; // For storing latitude &amp; longitude
+import 'package:geolocator/geolocator.dart';
 import 'package:travelmate/Views/LoginScreen.dart';
+
+import '../Services/location/location_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -15,6 +19,9 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  LatLng? currentLocation;
+  final MapController _mapController = MapController();
+  String statusMessage = "Loading location...";
 
   @override
   void initState() {
@@ -41,8 +48,80 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    // Navigate to Login Screen after 3 seconds
-    _navigateToLogin();  // ← ADDED THIS
+    _initLocation();
+
+    // 2. Store location for later use (example using static variable)
+    LocationStorage.userLocation = currentLocation;
+
+    // 3. Navigate after delay
+    _navigateToLogin();
+  }
+
+  Future <void> _initLocation() async {
+    bool serviceEnabled; // To check if GPS is ON
+    LocationPermission permission; // To check location permissions
+// Check if GPS is enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        statusMessage = "GPS is OFF. Please turn it ON."; // Show message if GPS OFF
+      });
+      return;
+    }
+// Check if app has permission to access location
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+// Ask user for permission
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          statusMessage = "Location permission denied!"; // User denied permission
+        });
+        return;
+      }
+    }
+// If permission is denied forever (cannot ask again)
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        statusMessage =
+        "Location permission permanently denied! Enable in Settings.";
+      });
+      return;
+    }
+// Try to get the last known location (fastest way)
+    Position? lastPos = await Geolocator.getLastKnownPosition();
+    if (lastPos != null) {
+      setState(() {
+        currentLocation = LatLng(lastPos.latitude, lastPos.longitude);
+        _mapController.move(currentLocation!, 16);
+      });
+    }
+// Get current location if last known location is not available
+    try {
+      Position pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high); // High accuracy location
+      setState(() {
+        currentLocation = LatLng(pos.latitude, pos.longitude);
+        _mapController.move(currentLocation!, 16); // Move map to current location
+      });
+    } catch (e) {
+      setState(() {
+        statusMessage = "Failed to get current location.";
+      });
+    }
+// Start listening to location changes (live tracking)
+    Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high, distanceFilter: 5))
+        .listen((Position pos) {
+      setState(() {
+        currentLocation = LatLng(pos.latitude, pos.longitude);
+      });
+    });
+
+    if (currentLocation != null) {
+      LocationStorage.userLocation = currentLocation;
+    }
   }
 
   // ← ADDED THIS METHOD

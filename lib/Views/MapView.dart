@@ -1,12 +1,27 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:latlong2/latlong.dart'; // Add this package
+import 'package:flutter_map/flutter_map.dart'; // Add this package
+import 'package:http/http.dart' as http;
+
+import '../Services/location/hotel_model.dart';
+import '../Services/location/hotel_service.dart'; // Add this package
 
 class MapView extends StatefulWidget {
   final String tripTitle;
-  
-  const MapView({super.key, required this.tripTitle});
+  final LatLng? initialLocation;
+  final Hotel? selectedHotel; // Make sure this exists
+
+  const MapView({
+    super.key,
+    required this.tripTitle,
+    this.initialLocation,
+    this.selectedHotel, // Make sure this exists
+  });
+
   @override
   State<MapView> createState() => _MapViewState();
 }
@@ -14,107 +29,126 @@ class MapView extends StatefulWidget {
 class _MapViewState extends State<MapView> {
   String _selectedView = 'route';
   List<Map<String, dynamic>> _markers = [];
+  List<LatLng> _routePoints = [];
+  LatLng? _selectedLocation;
+  MapController _mapController = MapController();
+  bool _isLoading = false;
+  List<Hotel> _nearbyHotels = [];
+  List<Map<String, dynamic>> _nearbyPlaces = [];
 
   @override
   void initState() {
     super.initState();
-    _loadMapData();
+
+    // Fix: Use selected hotel's location or initial location
+    if (widget.selectedHotel != null) {
+      _selectedLocation = widget.selectedHotel!.toLatLng();
+      // Clear all markers and add only the selected hotel
+      _markers = [{
+        'lat': widget.selectedHotel!.lat,
+        'lng': widget.selectedHotel!.lng,
+        'label': '★',
+        'color': 'red',
+        'name': widget.selectedHotel!.name,
+      }];
+    } else if (widget.initialLocation != null) {
+      _selectedLocation = widget.initialLocation;
+    } else {
+      _selectedLocation = const LatLng(48.8566, 2.3522); // Paris default
+    }
+
+    _loadInitialData();
   }
 
-  Future<void> _loadMapData() async {
+  // Add this method to your _MapViewState class in MapView.dart:
+  Future<void> _searchLocation(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      final String response =
-      await rootBundle.loadString('assets/map_data.json');
-      final data = json.decode(response);
-      setState(() {
-        _markers = List<Map<String, dynamic>>.from(data['markers']);
-      });
+      // Use Nominatim API for geocoding
+      final response = await http.get(
+        Uri.parse('https://nominatim.openstreetmap.org/search?format=json&q=$query&limit=1'),
+        headers: {'User-Agent': 'TravelMateApp/1.0'},
+      );
+
+      if (response.statusCode == 200) {
+        final results = json.decode(response.body);
+        if (results.isNotEmpty) {
+          final lat = double.parse(results[0]['lat']);
+          final lon = double.parse(results[0]['lon']);
+
+          setState(() {
+            _selectedLocation = LatLng(lat, lon);
+            _markers.clear(); // Clear existing markers
+            _markers.add({
+              'lat': lat,
+              'lng': lon,
+              'label': '📍',
+              'color': 'blue',
+              'name': results[0]['display_name'],
+            });
+          });
+
+          // Move map to new location
+          _mapController.move(_selectedLocation!, 15.0);
+        }
+      }
     } catch (e) {
-      SnackbarHelper.showError(context, 'Failed to load map data.');
+      SnackbarHelper.showError(context, 'Failed to search location.');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Map - Paris Vacation',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.teal.shade600,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Stack(
-        children: [
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.blue.shade100,
-                  Colors.blue.shade50,
-                ],
-              ),
-            ),
-            child: CustomPaint(
-              painter: MapPainter(),
-            ),
-          ),
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildViewButton('Route', 'route', Icons.route),
-                    ),
-                    Expanded(
-                      child: _buildViewButton('Hotels', 'hotels', Icons.hotel),
-                    ),
-                    Expanded(
-                      child: _buildViewButton('Places', 'places', Icons.place),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: _buildMarkers(),
-          ),
-          Positioned(
-            bottom: 16,
-            left: 16,
-            right: 16,
-            child: _buildInfoCard(),
-          ),
-        ],
-      ),
-    );
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Only load data if not coming from hotel selection
+      if (widget.selectedHotel == null) {
+        await _loadMapData();
+      }
+
+      // Always fetch OSM data for current location
+      await _fetchViewData();
+    } catch (e) {
+      print('Error loading initial data: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
+  // Remove the old _loadMapData and replace with:
+  Future<void> _loadMapData() async {
+    try {
+      final String response = await rootBundle.loadString('assets/map_data.json');
+      final data = json.decode(response);
+
+      // Only load markers if no hotel is selected
+      if (widget.selectedHotel == null) {
+        setState(() {
+          _markers = List<Map<String, dynamic>>.from(data['markers']);
+        });
+      }
+    } catch (e) {
+      print('No local map data found: $e');
+    }
+  }
+
+  // Update the view button functionality:
   Widget _buildViewButton(String label, String value, IconData icon) {
     final isSelected = _selectedView == value;
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedView = value;
+          _fetchViewData(); // This will fetch new data based on view
         });
       },
       child: Container(
@@ -146,22 +180,389 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Widget _buildMarkers() {
-    if (_markers.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  // Add this method to fetch data based on view:
+  Future<void> _fetchViewData() async {
+    if (_selectedLocation == null) return;
 
-    return Stack(
-      children: _markers.map((marker) {
-        final color = _getColor(marker['color']);
-        return _buildMarker(
-          marker['left'].toDouble(),
-          marker['top'].toDouble(),
-          marker['label'],
-          color,
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      switch (_selectedView) {
+        case 'hotels':
+          await _fetchNearbyHotels();
+          break;
+        case 'places':
+          await _fetchNearbyPlacesOSM();
+          break;
+        case 'route':
+          await _fetchRouteData();
+          break;
+      }
+    } catch (e) {
+      print('Error fetching view data: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchNearbyHotels() async {
+    // Clear existing markers
+    _markers.clear();
+
+    // Get all hotels from service
+    final allHotels = HotelService.getAllHotels();
+
+    // Filter hotels near current location (within 50km radius)
+    final nearbyHotels = allHotels.where((hotel) {
+      final distance = _calculateDistance(
+        _selectedLocation!.latitude,
+        _selectedLocation!.longitude,
+        hotel.lat,
+        hotel.lng,
+      );
+      return distance < 50; // 50km radius
+    }).toList();
+
+    setState(() {
+      _nearbyHotels = nearbyHotels;
+
+      // Convert hotels to markers
+      _markers = nearbyHotels.map((hotel) {
+        return {
+          'lat': hotel.lat,
+          'lng': hotel.lng,
+          'label': 'H',
+          'color': 'green',
+          'name': hotel.name,
+        };
+      }).toList();
+    });
+  }
+
+  Future<void> _fetchNearbyPlacesOSM() async {
+    if (_selectedLocation == null) return;
+
+    try {
+      final query = '''
+        [out:json];
+        node
+          ["tourism"~"attraction|museum|gallery"]
+          (around:5000,${_selectedLocation!.latitude},${_selectedLocation!.longitude});
+        out body;
+      ''';
+
+      final response = await http.post(
+        Uri.parse('https://overpass-api.de/api/interpreter'),
+        body: {'data': query},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _nearbyPlaces = List<Map<String, dynamic>>.from(data['elements'] ?? []);
+
+        setState(() {
+          // Clear existing markers
+          _markers.clear();
+
+          // Add OSM places as markers
+          _markers = _nearbyPlaces.map((place) {
+            return {
+              'lat': place['lat'],
+              'lng': place['lon'],
+              'label': 'P',
+              'color': 'blue',
+              'name': place['tags']['name'] ?? 'Place',
+            };
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error fetching OSM places: $e');
+    }
+  }
+
+  Future<void> _fetchRouteData() async {
+    if (_markers.length >= 2) {
+      try {
+        // Get route between first two markers
+        final start = _markers[0];
+        final end = _markers[1];
+
+        final response = await http.get(
+          Uri.parse('https://router.project-osrm.org/route/v1/driving/'
+              '${start['lng']},${start['lat']};${end['lng']},${end['lat']}'
+              '?overview=full&geometries=geojson'),
         );
-      }).toList(),
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final geometry = data['routes'][0]['geometry']['coordinates'];
+
+          setState(() {
+            _routePoints = List<LatLng>.from(
+                geometry.map((coord) => LatLng(coord[1], coord[0]))
+            );
+          });
+        }
+      } catch (e) {
+        print('Error fetching route: $e');
+      }
+    }
+  }
+
+  // Helper method to calculate distance
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const p = 0.017453292519943295;
+    final a = 0.5 - cos((lat2 - lat1) * p) / 2 +
+        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a)); // 2 * R * asin(sqrt(a))
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Map - Paris Vacation',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.teal.shade600,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Stack(
+        children: [
+          // OSM Map
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selectedLocation ?? const LatLng(48.8566, 2.3522),
+              initialZoom: 13.0,
+              maxZoom: 18.0,
+              minZoom: 3.0,
+              onTap: (tapPosition, latLng) {
+                // Handle map tap
+                _onMapTap(latLng);
+              },
+            ),
+            children: [
+              // OSM Tile Layer
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.travelmate.app',
+                subdomains: const ['a', 'b', 'c'],
+              ),
+
+              // Route Layer
+              if (_selectedView == 'route' && _routePoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _routePoints,
+                      color: Colors.blue.withOpacity(0.7),
+                      strokeWidth: 4,
+                    ),
+                  ],
+                ),
+
+              // Markers Layer
+              MarkerLayer(
+                markers: _buildOSMMarkers(),
+              ),
+            ],
+          ),
+
+          // Search Bar
+          Positioned(
+            top: 16,
+            left: 16,
+            right: 16,
+            child: _buildSearchBar(),
+          ),
+
+          // View Selector
+          Positioned(
+            top: 80,
+            left: 16,
+            right: 16,
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildViewButton('Route', 'route', Icons.route),
+                    ),
+                    Expanded(
+                      child: _buildViewButton('Hotels', 'hotels', Icons.hotel),
+                    ),
+                    Expanded(
+                      child: _buildViewButton('Places', 'places', Icons.place),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Loading Indicator
+          if (_isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+                  ),
+                ),
+              ),
+            ),
+
+          // Info Card
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: _buildInfoCard(),
+          ),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () {
+              _mapController.move(_selectedLocation ?? const LatLng(48.8566, 2.3522), 15.0);
+            },
+            backgroundColor: Colors.teal,
+            mini: true,
+            child: const Icon(Icons.my_location, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            onPressed: () {
+              _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1);
+            },
+            backgroundColor: Colors.teal,
+            mini: true,
+            child: const Icon(Icons.zoom_in, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            onPressed: () {
+              _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1);
+            },
+            backgroundColor: Colors.teal,
+            mini: true,
+            child: const Icon(Icons.zoom_out, color: Colors.white),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildSearchBar() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: Colors.grey.shade600),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search location...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.grey.shade600),
+                ),
+                onSubmitted: (value) {
+                  _searchLocation(value);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Marker> _buildOSMMarkers() {
+    return _markers.map((marker) {
+      final color = _getColor(marker['color']);
+      return Marker(
+        width: 40,
+        height: 50,
+        point: LatLng(
+          marker['lat'] ?? _selectedLocation!.latitude,
+          marker['lng'] ?? _selectedLocation!.longitude,
+        ),
+        child: Column(  // Change this line from "builder: (ctx) =>" to "child:"
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  marker['label'] ?? '!',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            Container(width: 2, height: 10, color: color),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  void _onMapTap(LatLng latLng) {
+    setState(() {
+      _markers.add({
+        'lat': latLng.latitude,
+        'lng': latLng.longitude,
+        'label': (_markers.length + 1).toString(),
+        'color': 'blue',
+      });
+    });
+  }
+
+  Future<void> _fetchOSMHotels(LatLng location) async {
+    // Implement hotel search from OSM
+  }
+
+  Future<void> _fetchOSMPlaces(LatLng location) async {
+    // Implement places search from OSM
   }
 
   Color _getColor(String name) {
@@ -179,44 +580,6 @@ class _MapViewState extends State<MapView> {
       default:
         return Colors.grey;
     }
-  }
-
-  Widget _buildMarker(double left, double top, String label, Color color) {
-    return Positioned(
-      left: left,
-      top: top,
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-          Container(width: 2, height: 10, color: color),
-        ],
-      ),
-    );
   }
 
   Widget _buildInfoCard() {
@@ -316,39 +679,4 @@ class _MapViewState extends State<MapView> {
       ),
     );
   }
-}
-
-class MapPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.teal.withOpacity(0.3)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    path.moveTo(100, 150);
-    path.quadraticBezierTo(150, 200, 200, 250);
-    path.lineTo(150, 350);
-    path.quadraticBezierTo(200, 300, 280, 200);
-    path.lineTo(180, 450);
-    canvas.drawPath(path, paint);
-
-    final gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.1)
-      ..strokeWidth = 1;
-
-    for (var i = 0; i < size.width; i += 50) {
-      canvas.drawLine(Offset(i.toDouble(), 0),
-          Offset(i.toDouble(), size.height), gridPaint);
-    }
-
-    for (var i = 0; i < size.height; i += 50) {
-      canvas.drawLine(
-          Offset(0, i.toDouble()), Offset(size.width, i.toDouble()), gridPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

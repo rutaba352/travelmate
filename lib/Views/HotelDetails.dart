@@ -340,7 +340,20 @@ class _HotelDetailsState extends State<HotelDetails>
                         ],
                       ),
                     ),
-                    child: Center(
+                    child: widget.hotelData?['image'] != null
+                        ? Image.asset(
+                      widget.hotelData!['image'],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Text(
+                            images[_selectedImageIndex],
+                            style: const TextStyle(fontSize: 100),
+                          ),
+                        );
+                      },
+                    )
+                        : Center(
                       child: Text(
                         images[_selectedImageIndex],
                         style: const TextStyle(fontSize: 100),
@@ -392,8 +405,7 @@ class _HotelDetailsState extends State<HotelDetails>
                   ),
                 ],
               ),
-            ),
-          ),
+            ),          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -403,10 +415,10 @@ class _HotelDetailsState extends State<HotelDetails>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Grand Plaza Hotel',
-                          style: TextStyle(
+                          widget.hotelData?['name'] ?? 'Grand Plaza Hotel',
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF263238),
@@ -423,16 +435,16 @@ class _HotelDetailsState extends State<HotelDetails>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
-                          children: const [
+                          children:  [
                             Icon(Icons.star, size: 20, color: Colors.amber),
                             SizedBox(width: 4),
                             Text(
-                              '4.8',
+                              widget.hotelData?['rating']?.toString() ?? '4.8',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
-                            ),
+                            )
                           ],
                         ),
                       ),
@@ -444,12 +456,12 @@ class _HotelDetailsState extends State<HotelDetails>
                       Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
-                        'Downtown District, Paris',
+                        widget.hotelData?['location'] ?? 'Downtown District, Paris',
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.grey[600],
                         ),
-                      ),
+                      )
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -526,8 +538,8 @@ class _HotelDetailsState extends State<HotelDetails>
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '\$150 / night',
+                  Text(
+                    widget.hotelData?['price'] ?? '\$150 / night',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -777,6 +789,11 @@ class _HotelDetailsState extends State<HotelDetails>
   }
 
   Widget _buildAmenitiesTab() {
+    // Get amenities from hotelData or use default
+    final List<String> hotelAmenities =
+        widget.hotelData?['amenities']?.cast<String>() ??
+            amenities.map((a) => a['name'] as String).toList();
+
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -784,9 +801,9 @@ class _HotelDetailsState extends State<HotelDetails>
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: amenities.length,
+      itemCount: hotelAmenities.length,
       itemBuilder: (context, index) {
-        final amenity = amenities[index];
+        final amenity = hotelAmenities[index];
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -796,14 +813,16 @@ class _HotelDetailsState extends State<HotelDetails>
           child: Row(
             children: [
               Icon(
-                amenity['icon'],
+                amenities.isNotEmpty && index < amenities.length
+                    ? amenities[index]['icon']
+                    : Icons.check_circle,
                 color: const Color(0xFF00897B),
                 size: 24,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  amenity['name'],
+                  amenity,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -818,7 +837,6 @@ class _HotelDetailsState extends State<HotelDetails>
       },
     );
   }
-
   Widget _buildRoomsTab() {
     return ListView.builder(
       itemCount: roomTypes.length,

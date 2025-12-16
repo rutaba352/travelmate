@@ -219,7 +219,8 @@ class HomePageState extends State<HomePage> {
     final lower = name.toLowerCase();
     if (lower.contains('paris')) return 'assets/images/paris.jpg';
     if (lower.contains('dubai')) return 'assets/images/dubai.jpg';
-    if (lower.contains('london')) return 'assets/images/london.jpg';
+    if (lower.contains('london'))
+      return 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=600&auto=format&fit=crop';
     if (lower.contains('maldives')) return 'assets/images/maldives.jpg';
     if (lower.contains('hunza')) return 'assets/images/hunza.jpg';
     if (lower.contains('skardu')) return 'assets/images/skardu.jpg';
@@ -228,7 +229,7 @@ class HomePageState extends State<HomePage> {
     if (lower.contains('istanbul')) return 'assets/images/istanbul.jpg';
     if (lower.contains('bangkok')) return 'assets/images/bangkok.jpg';
     if (lower.contains('new york') || lower.contains('nyc'))
-      return 'assets/images/new_york.jpg';
+      return 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?q=80&w=600&auto=format&fit=crop';
 
     switch (category.toLowerCase()) {
       case 'beach':

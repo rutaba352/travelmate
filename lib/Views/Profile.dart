@@ -14,6 +14,7 @@ import 'package:travelmate/Services/DataSeeder.dart';
 import 'package:travelmate/Views/MainNavigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:travelmate/Services/StorageService.dart';
+import 'package:gal/gal.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -201,6 +202,23 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
       }
       print('Image picked: ${image.path}');
 
+      if (source == ImageSource.camera) {
+        try {
+          print('Saving captured image to gallery...');
+          await Gal.putImage(image.path);
+          print('Image saved to gallery successfully');
+          if (mounted) {
+            SnackbarHelper.showSuccess(context, 'Photo saved to gallery');
+          }
+        } catch (e) {
+          print('Error saving to gallery: $e');
+          // Don't block upload if save fails, but notify user
+          if (mounted) {
+            SnackbarHelper.showError(context, 'Failed to save to gallery: $e');
+          }
+        }
+      }
+
       setState(() => _isLoading = true);
 
       // Upload
@@ -225,7 +243,22 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
     } catch (e) {
       print('Error in _pickAndUploadImage: $e');
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error updating photo: $e');
+        // Show detailed error dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Upload Failed'),
+            content: Text(
+              'Failed to upload image. Please check your Cloudinary configuration.\n\nError details:\n$e',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } finally {
       print('Finished _pickAndUploadImage');

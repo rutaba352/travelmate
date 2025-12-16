@@ -205,7 +205,8 @@ class _ExploreState extends State<Explore> {
     if (lower.contains('paris')) return 'assets/images/paris.jpg';
     if (lower.contains('dubai')) return 'assets/images/dubai.jpg';
     if (lower.contains('london'))
-      return 'assets/images/london.jpg'; // You might need to add this asset or use placeholder
+      // Return web URL as fallback since local asset is having bundling issues
+      return 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=600&auto=format&fit=crop';
     if (lower.contains('maldives')) return 'assets/images/maldives.jpg';
     if (lower.contains('hunza')) return 'assets/images/hunza.jpg';
     if (lower.contains('skardu')) return 'assets/images/skardu.jpg';
@@ -214,7 +215,8 @@ class _ExploreState extends State<Explore> {
     if (lower.contains('istanbul')) return 'assets/images/istanbul.jpg';
     if (lower.contains('bangkok')) return 'assets/images/bangkok.jpg';
     if (lower.contains('new york') || lower.contains('nyc'))
-      return 'assets/images/new_york.jpg';
+      // Return web URL as fallback
+      return 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?q=80&w=600&auto=format&fit=crop';
 
     switch (category.toLowerCase()) {
       case 'beach':
@@ -460,22 +462,59 @@ class _ExploreState extends State<Explore> {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(15),
                     ),
-                    child: Image.asset(
-                      destination['image'],
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: _primaryColor.withOpacity(0.3),
-                        child: Center(
-                          child: Icon(
-                            Icons.location_city,
-                            size: 40,
-                            color: _primaryColor,
+                    child: destination['image'].toString().startsWith('http')
+                        ? Image.network(
+                            destination['image'],
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: _primaryColor.withOpacity(0.3),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      size: 40,
+                                      color: _primaryColor,
+                                    ),
+                                  ),
+                                ),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value:
+                                        loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                  .cumulativeBytesLoaded /
+                                              loadingProgress
+                                                  .expectedTotalBytes!
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            destination['image'],
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: _primaryColor.withOpacity(0.3),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.location_city,
+                                      size: 40,
+                                      color: _primaryColor,
+                                    ),
+                                  ),
+                                ),
                           ),
-                        ),
-                      ),
-                    ),
                   ),
                   Positioned(
                     top: 8,

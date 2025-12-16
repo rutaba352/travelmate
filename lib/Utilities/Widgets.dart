@@ -6,7 +6,7 @@ import 'package:travelmate/Views/MyTrips.dart';
 import 'package:travelmate/Views/Activities.dart';
 import 'package:travelmate/Views/Dining.dart';
 import 'package:travelmate/Views/PaymentMethods.dart';
-import 'package:travelmate/Views/MainNavigation.dart';
+
 import 'package:travelmate/Views/HelpSupport.dart';
 import 'package:travelmate/Views/PrivacyPolicy.dart';
 import 'package:travelmate/Views/Saved.dart';
@@ -201,6 +201,9 @@ Widget buildPopularDestinations(
           itemCount: destinations.length,
           itemBuilder: (context, index) {
             final dest = destinations[index];
+            final imagePath = dest['image'] ?? 'assets/images/placeholder.jpg';
+            final isNetworkImage = imagePath.toString().startsWith('http');
+
             return GestureDetector(
               onTap: () => onDestinationTap?.call(dest),
               child: Container(
@@ -231,25 +234,68 @@ Widget buildPopularDestinations(
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(15),
                         ),
-                        child: Image.asset(
-                          dest['image'] ?? 'assets/images/placeholder.jpg',
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                                color: const Color(0xFF00897B).withOpacity(0.3),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.location_city,
-                                    size: 40,
-                                    color: Color(0xFF00897B),
-                                  ),
-                                ),
+                        child: isNetworkImage
+                            ? Image.network(
+                                imagePath,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      color: const Color(
+                                        0xFF00897B,
+                                      ).withOpacity(0.3),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          size: 40,
+                                          color: Color(0xFF00897B),
+                                        ),
+                                      ),
+                                    ),
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              )
+                            : Image.asset(
+                                imagePath,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      color: const Color(
+                                        0xFF00897B,
+                                      ).withOpacity(0.3),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.location_city,
+                                          size: 40,
+                                          color: Color(0xFF00897B),
+                                        ),
+                                      ),
+                                    ),
                               ),
-                        ),
                       ),
                     ),
+
                     Padding(
                       padding: const EdgeInsets.all(10),
                       child: Column(

@@ -293,6 +293,7 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
       if (photoURL != null) {
         await user.updatePhotoURL(photoURL);
       }
+      await user.reload();
     } else {
       throw UserNotLoggedInAuthException();
     }

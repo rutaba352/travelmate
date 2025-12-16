@@ -1,60 +1,43 @@
-import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // TODO: Replace with your actual Cloudinary credentials
+  static const String _cloudName = 'dzkyjhx28';
+  static const String _uploadPreset = 'travelMateProfileImages';
+
+  final CloudinaryPublic _cloudinary = CloudinaryPublic(
+    _cloudName,
+    _uploadPreset,
+    cache: false,
+  );
 
   Future<String> uploadProfileImage(XFile image, String userId) async {
     try {
-      final Reference ref = _storage
-          .ref()
-          .child('user_profile_images')
-          .child('$userId.jpg');
+      print('Starting Cloudinary upload for userId: $userId');
 
-      print('Starting upload for userId: $userId');
-
-      // Read file bytes first to ensure we can access the file locally
-      final Uint8List bytes = await image.readAsBytes();
-      print('File read successfully. Size: ${bytes.length} bytes');
-
-      final SettableMetadata metadata = SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: {'picked-file-path': image.path},
+      CloudinaryResponse response = await _cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          image.path,
+          resourceType: CloudinaryResourceType.Image,
+          folder: 'travelMateProfileImages',
+          publicId:
+              '${userId}_${DateTime.now().millisecondsSinceEpoch}', // Unique name to bypass CDN cache
+        ),
       );
 
-      final UploadTask uploadTask = ref.putData(bytes, metadata);
-
-      print('Waiting for upload to complete...');
-
-      // Monitor the task
-      uploadTask.snapshotEvents.listen(
-        (TaskSnapshot snapshot) {
-          print(
-            'Upload progress: ${snapshot.bytesTransferred}/${snapshot.totalBytes}',
-          );
-        },
-        onError: (e) {
-          print('Upload stream error: $e');
-        },
-      );
-
-      final TaskSnapshot snapshot = await uploadTask;
-      print('Upload completed. State: ${snapshot.state}');
-
-      if (snapshot.state == TaskState.success) {
-        final String downloadUrl = await snapshot.ref.getDownloadURL();
-        print('Download URL: $downloadUrl');
-        return downloadUrl;
-      } else {
-        throw Exception('Upload failed with state: ${snapshot.state}');
-      }
-    } on FirebaseException catch (e) {
-      print('Firebase Exception: ${e.code} - ${e.message}');
-      throw Exception('Firebase Upload Error: ${e.message}');
+      print('Cloudinary upload successful. URL: ${response.secureUrl}');
+      // Append timestamp to force cache refresh on client side
+      final String uniqueUrl =
+          '${response.secureUrl}?v=${DateTime.now().millisecondsSinceEpoch}';
+      return uniqueUrl;
+    } on CloudinaryException catch (e) {
+      print('Cloudinary Exception: ${e.message}');
+      print('Request: ${e.request}');
+      throw Exception('Cloudinary Upload Error: ${e.message}');
     } catch (e) {
-      print('Generic Upload Error: $e');
-      throw Exception('Failed to upload image: $e');
+      print('Generic Cloudinary Upload Error: $e');
+      throw Exception('Failed to upload image to Cloudinary: $e');
     }
   }
 }

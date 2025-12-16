@@ -1,1 +1,31 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"travelmate-100","appId":"1:752416442170:android:6acbbe79713a129fd83203","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"travelmate-100","configurations":{"android":"1:752416442170:android:6acbbe79713a129fd83203","ios":"1:752416442170:ios:176910ced0566a06d83203","macos":"1:752416442170:ios:176910ced0566a06d83203","web":"1:752416442170:web:1494093b95ed3f70d83203","windows":"1:752416442170:web:df590566e53651f9d83203"}}}}}}
+{
+    "firestore": {
+        "rules": "firestore.rules"
+    },
+    "storage": {
+        "rules": "storage.rules"
+    },
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "travelmate-100",
+                    "appId": "1:752416442170:android:6acbbe79713a129fd83203",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "travelmate-100",
+                    "configurations": {
+                        "android": "1:752416442170:android:6acbbe79713a129fd83203",
+                        "ios": "1:752416442170:ios:176910ced0566a06d83203",
+                        "macos": "1:752416442170:ios:176910ced0566a06d83203",
+                        "web": "1:752416442170:web:1494093b95ed3f70d83203",
+                        "windows": "1:752416442170:web:df590566e53651f9d83203"
+                    }
+                }
+            }
+        }
+    }
+}

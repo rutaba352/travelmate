@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /user_profile_images/{allPaths=**} {
+      // Allow read for everyone (so profile photos can be seen)
+      allow read: if true;
+      // Allow write if the user is authenticated. 
+      // We rely on the code to name the file correctly, 
+      // but stricter rules could check 'request.auth.uid' in the filename.
+      allow write: if request.auth != null;
+    }
+  }
+}

@@ -7,6 +7,10 @@ import 'package:travelmate/Views/Activities.dart';
 import 'package:travelmate/Views/Dining.dart';
 import 'package:travelmate/Views/PaymentMethods.dart';
 import 'package:travelmate/Views/MainNavigation.dart';
+import 'package:travelmate/Views/HelpSupport.dart';
+import 'package:travelmate/Views/PrivacyPolicy.dart';
+import 'package:travelmate/Views/Saved.dart';
+import 'package:travelmate/Views/Settings.dart'; // Added import
 
 // ===== Header =====
 Widget buildHeader() {
@@ -47,14 +51,15 @@ Widget buildHeader() {
 }
 
 // ===== Location Input =====
-Widget buildLocationInput({
+Widget buildLocationInput(
+  BuildContext context, {
   required TextEditingController controller,
   required IconData icon,
   required String hint,
 }) {
   return Container(
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(12),
     ),
     child: TextField(
@@ -74,6 +79,7 @@ Widget buildLocationInput({
 
 // ===== Search Section =====
 Widget buildSearchSection(
+  BuildContext context,
   TextEditingController startLocationController,
   TextEditingController destinationController, {
   VoidCallback? onSearch,
@@ -108,12 +114,14 @@ Widget buildSearchSection(
         ),
         const SizedBox(height: 20),
         buildLocationInput(
+          context,
           controller: startLocationController,
           icon: Icons.my_location,
           hint: 'Start Location',
         ),
         const SizedBox(height: 15),
         buildLocationInput(
+          context,
           controller: destinationController,
           icon: Icons.location_on,
           hint: 'Destination',
@@ -373,30 +381,90 @@ Widget buildQuickActions(BuildContext context) {
 }
 
 // ===== Recent Searches =====
-Widget buildRecentSearches() {
+Widget buildRecentSearches(
+  List<Map<String, String>> searches,
+  VoidCallback onClear,
+  Function(int) onDelete,
+) {
+  if (searches.isEmpty) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Recent Searches',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF263238),
+          ),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          padding: const EdgeInsets.all(20),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.grey[50], // Light background
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.history, size: 40, color: Colors.grey[400]),
+              const SizedBox(height: 10),
+              Text(
+                'No recent searches',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
-        'Recent Searches',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF263238),
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Recent Searches',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF263238),
+            ),
+          ),
+          TextButton(
+            onPressed: onClear,
+            child: const Text(
+              'Clear All',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
       ),
-      const SizedBox(height: 15),
-      buildSearchItem('New York', 'Los Angeles'),
-      buildSearchItem('London', 'Edinburgh'),
-      buildSearchItem('Mumbai', 'Goa'),
+      const SizedBox(height: 10),
+      ...List.generate(searches.length, (index) {
+        final search = searches[index];
+        return buildSearchItem(
+          search['from'] ?? '',
+          search['to'] ?? '',
+          onDelete: () => onDelete(index),
+        );
+      }),
     ],
   );
 }
 
-Widget buildSearchItem(String from, String to) {
+Widget buildSearchItem(String from, String to, {VoidCallback? onDelete}) {
   return Container(
     margin: const EdgeInsets.only(bottom: 10),
-    padding: const EdgeInsets.all(15),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.grey[50],
       borderRadius: BorderRadius.circular(12),
@@ -414,20 +482,25 @@ Widget buildSearchItem(String from, String to) {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$from → $to',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          child: Text(
+            '$from → $to',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+        if (onDelete != null)
+          IconButton(
+            icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+            onPressed: onDelete,
+            constraints: const BoxConstraints(), // Compact
+            padding: EdgeInsets.zero,
+          )
+        else
+          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
       ],
     ),
   );
@@ -439,6 +512,7 @@ Widget buildAppBar(
   VoidCallback onEditTap, {
   String? photoURL,
   String? userName,
+  VoidCallback? onPhotoTap,
 }) {
   return SliverAppBar(
     expandedHeight: 200,
@@ -460,63 +534,66 @@ Widget buildAppBar(
             const SizedBox(height: 40),
             Hero(
               tag: 'profile_avatar',
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      backgroundImage: photoURL != null && photoURL.isNotEmpty
-                          ? NetworkImage(photoURL)
-                          : null,
-                      child: photoURL == null || photoURL.isEmpty
-                          ? Text(
-                              userName != null && userName.isNotEmpty
-                                  ? userName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF00897B),
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
+              child: GestureDetector(
+                onTap: onPhotoTap,
+                child: Stack(
+                  children: [
+                    Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.2),
-                            blurRadius: 5,
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        size: 20,
-                        color: Color(0xFF00897B),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.white,
+                        backgroundImage: photoURL != null && photoURL.isNotEmpty
+                            ? NetworkImage(photoURL)
+                            : null,
+                        child: photoURL == null || photoURL.isEmpty
+                            ? Text(
+                                userName != null && userName.isNotEmpty
+                                    ? userName[0].toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF00897B),
+                                ),
+                              )
+                            : null,
                       ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 20,
+                          color: Color(0xFF00897B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -530,12 +607,12 @@ Widget buildAppBar(
   );
 }
 
-Widget buildStatsSection({int trips = 0, int places = 0, int photos = 0}) {
+Widget buildStatsSection(BuildContext context, {int trips = 0, int places = 0, int photos = 0}) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(15),
       boxShadow: [
         BoxShadow(
@@ -548,27 +625,27 @@ Widget buildStatsSection({int trips = 0, int places = 0, int photos = 0}) {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        buildStatItem(trips.toString(), 'Trips', Icons.flight_takeoff),
+        buildStatItem(context, trips.toString(), 'Trips', Icons.flight_takeoff),
         Container(width: 1, height: 40, color: Colors.grey[300]),
-        buildStatItem(places.toString(), 'Saved', Icons.bookmark),
+        buildStatItem(context, places.toString(), 'Saved', Icons.bookmark),
         Container(width: 1, height: 40, color: Colors.grey[300]),
-        buildStatItem(photos.toString(), 'Photos', Icons.photo_camera),
+        buildStatItem(context, photos.toString(), 'Photos', Icons.photo_camera),
       ],
     ),
   );
 }
 
-Widget buildStatItem(String value, String label, IconData icon) {
+Widget buildStatItem(BuildContext context, String value, String label, IconData icon) {
   return Column(
     children: [
       Icon(icon, color: const Color(0xFF00897B), size: 24),
       const SizedBox(height: 8),
       Text(
         value,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF263238),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
@@ -584,6 +661,7 @@ Widget buildDivider() {
 }
 
 Widget buildMenuItem(
+  BuildContext context,
   String title,
   IconData icon,
   VoidCallback onTap, {
@@ -623,7 +701,7 @@ Widget buildMenuItem(
                   fontWeight: FontWeight.w500,
                   color: isDestructive
                       ? Colors.red[700]
-                      : const Color(0xFF263238),
+                      : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -635,11 +713,11 @@ Widget buildMenuItem(
   );
 }
 
-Widget buildMenuSection(VoidCallback onLogout, BuildContext context) {
+Widget buildMenuSection(VoidCallback onLogout, BuildContext context, {VoidCallback? onSettingsReturn}) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(15),
       boxShadow: [
         BoxShadow(
@@ -652,6 +730,7 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context) {
     child: Column(
       children: [
         buildMenuItem(
+          context,
           'My Trips',
           Icons.luggage,
           () => Navigator.push(
@@ -661,12 +740,17 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context) {
         ),
         buildDivider(),
         buildMenuItem(
+          context,
           'Saved Places',
           Icons.bookmark,
-          () => MainNavigation.switchTab(context, 2),
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Saved()),
+          ),
         ),
         buildDivider(),
         buildMenuItem(
+          context,
           'Payment Methods',
           Icons.payment,
           () => Navigator.push(
@@ -676,42 +760,53 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context) {
         ),
         buildDivider(),
         buildMenuItem(
+          context,
           'Settings',
           Icons.settings,
-          () => Navigator.pushNamed(context, '/settings'),
+          () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const Settings()),
+            );
+            onSettingsReturn?.call();
+          },
         ),
         buildDivider(),
         buildMenuItem(
+          context,
           'Help & Support',
           Icons.help_outline,
-          () => SnackbarHelper.showInfo(
+          () => Navigator.push(
             context,
-            'Support: support@travelmate.com',
+            MaterialPageRoute(builder: (context) => const HelpSupport()),
           ),
         ),
         buildDivider(),
         buildMenuItem(
+          context,
           'Privacy Policy',
           Icons.privacy_tip_outlined,
-          () => SnackbarHelper.showInfo(
+          () => Navigator.push(
             context,
-            'Privacy Policy: Data is stored securely on Firebase.',
+            MaterialPageRoute(builder: (context) => const PrivacyPolicy()),
           ),
         ),
         buildDivider(),
-        buildMenuItem('Logout', Icons.logout, onLogout, isDestructive: true),
+        buildMenuItem(context, 'Logout', Icons.logout, onLogout, isDestructive: true),
       ],
     ),
   );
 }
 
 Widget buildInfoField(
+  BuildContext context,
   String label,
   TextEditingController controller,
   IconData icon, {
   bool enabled = false,
   int maxLines = 1,
 }) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -719,7 +814,7 @@ Widget buildInfoField(
         label,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey[600],
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -727,21 +822,30 @@ Widget buildInfoField(
       AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
-          color: enabled ? Colors.grey[50] : Colors.transparent,
+          color: enabled 
+              ? (isDarkMode ? Colors.grey[800] : Colors.grey[50]) 
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: enabled ? const Color(0xFF00897B) : Colors.grey[300]!,
+            color: enabled 
+                ? const Color(0xFF00897B) 
+                : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
           ),
         ),
         child: TextField(
           controller: controller,
           enabled: enabled,
           maxLines: maxLines,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF263238)),
+          style: TextStyle(
+            fontSize: 14, 
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             prefixIcon: Icon(
               icon,
-              color: enabled ? const Color(0xFF00897B) : Colors.grey[400],
+              color: enabled 
+                  ? const Color(0xFF00897B) 
+                  : (isDarkMode ? Colors.grey[500] : Colors.grey[400]),
               size: 20,
             ),
             border: InputBorder.none,
@@ -771,7 +875,7 @@ Widget buildProfileInfo(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(15),
       boxShadow: [
         BoxShadow(
@@ -787,12 +891,12 @@ Widget buildProfileInfo(
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+             Text(
               'Profile Information',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF263238),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             if (isEditing)
@@ -827,6 +931,7 @@ Widget buildProfileInfo(
         ),
         const SizedBox(height: 20),
         buildInfoField(
+          context,
           'Full Name',
           nameController,
           Icons.person_outline,
@@ -834,6 +939,7 @@ Widget buildProfileInfo(
         ),
         const SizedBox(height: 15),
         buildInfoField(
+          context,
           'Email',
           emailController,
           Icons.email_outlined,
@@ -841,6 +947,7 @@ Widget buildProfileInfo(
         ),
         const SizedBox(height: 15),
         buildInfoField(
+          context,
           'Phone',
           phoneController,
           Icons.phone_outlined,
@@ -848,6 +955,7 @@ Widget buildProfileInfo(
         ),
         const SizedBox(height: 15),
         buildInfoField(
+          context,
           'Bio',
           bioController,
           Icons.info_outline,

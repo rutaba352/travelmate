@@ -21,5 +21,11 @@ abstract class AuthProvider {
   
   Future<void> sendEmailVerification();
   
+  Future<void> reauthenticate(String password);
+  
+  Future<void> updatePassword(String newPassword);
+  
+  Future<void> updateUser({String? displayName, String? photoURL});
+  
   Future<void> sendPasswordReset({required String toEmail});
 }

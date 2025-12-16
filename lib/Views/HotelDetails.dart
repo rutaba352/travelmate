@@ -224,16 +224,14 @@ class _HotelDetailsState extends State<HotelDetails>
                       final bookingData = Map<String, dynamic>.from(
                         widget.hotelData ?? {},
                       );
-                      bookingData['checkIn'] = _checkInDate.toString().split(
-                        ' ',
-                      )[0];
-                      bookingData['checkOut'] = _checkOutDate.toString().split(
-                        ' ',
-                      )[0];
+                      bookingData['checkIn'] =
+                          "${_checkInDate!.day} ${_getMonthName(_checkInDate!.month)} ${_checkInDate!.year}";
+                      bookingData['checkOut'] =
+                          "${_checkOutDate!.day} ${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.year}";
+                      bookingData['startDate'] = bookingData['checkIn']; // Match MyTrips
                       bookingData['guests'] = _numberOfGuests;
                       bookingData['rooms'] = _numberOfRooms;
-                      bookingData['totalPrice'] =
-                          450; // Placeholder calculation or extract
+                      bookingData['totalPrice'] = 450;
                       bookingData['category'] = 'Hotels';
                       bookingData['date'] = DateTime.now().toString().split(
                         ' ',
@@ -1009,5 +1007,22 @@ class _HotelDetailsState extends State<HotelDetails>
         );
       },
     );
+  }
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return months[month - 1];
   }
 }

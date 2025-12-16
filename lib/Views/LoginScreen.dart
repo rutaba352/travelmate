@@ -4,6 +4,8 @@ import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Views/Register.dart';
 import 'package:travelmate/Views/MainNavigation.dart';
+import 'package:travelmate/Views/ForgotPasswordScreen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -26,6 +28,22 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _authService = AuthService.firebase();
+    _loadRememberMe();
+  }
+
+  Future<void> _loadRememberMe() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _rememberMe = prefs.getBool('remember_me') ?? false;
+        if (_rememberMe) {
+          _emailController.text = prefs.getString('email') ?? '';
+          _passwordController.text = prefs.getString('password') ?? '';
+        }
+      });
+    } catch (e) {
+      print('Error loading remember me preferences: $e');
+    }
   }
 
   @override
@@ -40,10 +58,26 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = true);
 
       try {
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
+
         await _authService.logIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
+          email: email,
+          password: password,
         );
+
+        // Handle Remember Me
+        if (_rememberMe) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('email', email);
+          await prefs.setString('password', password);
+          await prefs.setBool('remember_me', true);
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('email');
+          await prefs.remove('password');
+          await prefs.remove('remember_me');
+        }
 
         if (mounted) {
           setState(() => _isLoading = false);
@@ -142,41 +176,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleForgotPassword() async {
-    if (_emailController.text.trim().isEmpty) {
-      SnackbarHelper.showWarning(
-        context,
-        'Please enter your email address first',
-      );
-      return;
-    }
-
-    try {
-      await _authService.sendPasswordReset(
-        toEmail: _emailController.text.trim(),
-      );
-      if (mounted) {
-        SnackbarHelper.showSuccess(
-          context,
-          'Password reset link sent to your email!',
-        );
-      }
-    } on InvalidEmailAuthException {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Invalid email format.');
-      }
-    } on UserNotFoundAuthException {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'No user found with this email.');
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(
-          context,
-          'Failed to send reset email. Please try again.',
-        );
-      }
-    }
+  void _handleForgotPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+    );
   }
 
   void _handleSignUp() {
@@ -217,18 +221,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 30),
 
                   // Welcome Text
-                  const Text(
+                  Text(
                     'Welcome Back!',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF263238),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Sign in to continue your journey',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
                   ),
                   const SizedBox(height: 40),
 
@@ -241,24 +248,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Enter your email',
                       prefixIcon: const Icon(
                         Icons.email_outlined,
-                        color: Color(0xFF00897B),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF00897B),
-                          width: 2,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
+                      // Borders are handled by Theme
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -281,14 +272,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Enter your password',
                       prefixIcon: const Icon(
                         Icons.lock_outline,
-                        color: Color(0xFF00897B),
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible
                               ? Icons.visibility_off
                               : Icons.visibility,
-                          color: Colors.grey[600],
                         ),
                         onPressed: () {
                           setState(() {
@@ -296,22 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                         },
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF00897B),
-                          width: 2,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
+                      // Borders handled by Theme
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -340,11 +314,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                             activeColor: const Color(0xFF00897B),
                           ),
-                          const Text(
+                          Text(
                             'Remember me',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF263238),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],

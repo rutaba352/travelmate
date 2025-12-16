@@ -132,8 +132,10 @@ class SavedItemsService {
         'bookedAt': FieldValue.serverTimestamp(),
         'status': 'Upcoming',
         'itemId': itemId,
-        'startDate': _formatDate(DateTime.now()), // Default to now for demo
-        'endDate': _formatDate(DateTime.now().add(const Duration(days: 7))),
+        'startDate': item['startDate'] ??
+            _formatDate(DateTime.now()), // Respect passed date
+        'endDate': item['endDate'] ??
+            _formatDate(DateTime.now().add(const Duration(days: 7))),
       });
       return true;
     } catch (e) {

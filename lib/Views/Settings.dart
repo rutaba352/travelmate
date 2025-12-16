@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:travelmate/Services/Auth/AuthServices.dart';
+import 'package:travelmate/Services/ThemeService.dart';
+import 'package:travelmate/Services/Auth/AuthException.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:travelmate/Views/EditProfile.dart';
+import 'package:travelmate/Views/HelpSupport.dart';
+import 'package:travelmate/Views/PrivacyPolicy.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Settings extends StatefulWidget {
   const Settings({Key? key}) : super(key: key);
@@ -13,7 +21,6 @@ class _SettingsState extends State<Settings> {
   bool _emailNotifications = true;
   bool _pushNotifications = true;
   bool _locationServices = true;
-  bool _darkMode = false;
   String _selectedLanguage = 'English';
   String _selectedCurrency = 'USD';
 
@@ -186,9 +193,9 @@ class _SettingsState extends State<Settings> {
               icon: Icons.person_outline,
               title: 'Edit Profile',
               subtitle: 'Update your personal information',
-              onTap: () => SnackbarHelper.showInfo(
+              onTap: () => Navigator.push(
                 context,
-                'Opening profile editor...',
+                MaterialPageRoute(builder: (context) => const EditProfile()),
               ),
             ),
             _buildDivider(),
@@ -196,19 +203,16 @@ class _SettingsState extends State<Settings> {
               icon: Icons.lock_outline,
               title: 'Change Password',
               subtitle: 'Update your password',
-              onTap: () => SnackbarHelper.showInfo(
-                context,
-                'Opening password change...',
-              ),
+              onTap: _showChangePasswordDialog,
             ),
             _buildDivider(),
             _buildSettingsTile(
               icon: Icons.security,
               title: 'Privacy & Security',
               subtitle: 'Manage your privacy settings',
-              onTap: () => SnackbarHelper.showInfo(
+              onTap: () => Navigator.push(
                 context,
-                'Opening privacy settings...',
+                MaterialPageRoute(builder: (context) => const PrivacyPolicy()),
               ),
             ),
           ]),
@@ -290,13 +294,9 @@ class _SettingsState extends State<Settings> {
               icon: Icons.dark_mode_outlined,
               title: 'Dark Mode',
               subtitle: 'Enable dark theme',
-              value: _darkMode,
+              value: Provider.of<ThemeService>(context).isDarkMode,
               onChanged: (value) {
-                setState(() => _darkMode = value);
-                SnackbarHelper.showInfo(
-                  context,
-                  'Dark mode coming soon!',
-                );
+                Provider.of<ThemeService>(context, listen: false).toggleTheme(value);
               },
             ),
           ]),
@@ -310,9 +310,9 @@ class _SettingsState extends State<Settings> {
               icon: Icons.help_outline,
               title: 'Help Center',
               subtitle: 'Get help with your account',
-              onTap: () => SnackbarHelper.showInfo(
+              onTap: () => Navigator.push(
                 context,
-                'Opening help center...',
+                MaterialPageRoute(builder: (context) => const HelpSupport()),
               ),
             ),
             _buildDivider(),
@@ -320,20 +320,14 @@ class _SettingsState extends State<Settings> {
               icon: Icons.feedback_outlined,
               title: 'Send Feedback',
               subtitle: 'Share your thoughts with us',
-              onTap: () => SnackbarHelper.showInfo(
-                context,
-                'Opening feedback form...',
-              ),
+              onTap: _showFeedbackDialog,
             ),
             _buildDivider(),
             _buildSettingsTile(
               icon: Icons.star_outline,
               title: 'Rate Us',
               subtitle: 'Rate TravelMate on the store',
-              onTap: () => SnackbarHelper.showInfo(
-                context,
-                'Opening app store...',
-              ),
+              onTap: _showRatingDialog,
             ),
             _buildDivider(),
             _buildSettingsTile(
@@ -462,7 +456,7 @@ class _SettingsState extends State<Settings> {
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
@@ -502,7 +496,7 @@ class _SettingsState extends State<Settings> {
         style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: textColor ?? const Color(0xFF263238),
+          color: textColor ?? Theme.of(context).colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
@@ -569,6 +563,283 @@ class _SettingsState extends State<Settings> {
       height: 1,
       indent: 68,
       color: Colors.grey[200],
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final oldPasswordController = TextEditingController();
+    final authService = AuthService.firebase();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Password'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Verify it\'s you',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please enter your current password to continue.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: oldPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Current Password',
+                prefixIcon: Icon(Icons.lock_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (oldPasswordController.text.isEmpty) {
+                SnackbarHelper.showError(context, 'Enter current password');
+                return;
+              }
+
+              try {
+                await authService.reauthenticate(oldPasswordController.text);
+                if (mounted) {
+                  Navigator.pop(context); // Close old pass dialog
+                  _showNewPasswordDialog(context, authService);
+                }
+              } on WrongPasswordAuthException {
+                if (mounted) {
+                  SnackbarHelper.showError(context, 'Incorrect password');
+                }
+              } catch (e) {
+                if (mounted) {
+                  SnackbarHelper.showError(context, 'Error: $e');
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00897B),
+            ),
+            child: const Text('NEXT'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNewPasswordDialog(BuildContext context, AuthService authService) {
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set New Password'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                prefixIcon: Icon(Icons.lock_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: confirmPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Confirm Password',
+                prefixIcon: Icon(Icons.lock_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (newPasswordController.text.isEmpty) {
+                SnackbarHelper.showError(context, 'Enter new password');
+                return;
+              }
+              if (newPasswordController.text.length < 6) {
+                SnackbarHelper.showError(context, 'Password too short');
+                return;
+              }
+              if (newPasswordController.text != confirmPasswordController.text) {
+                SnackbarHelper.showError(context, 'Passwords do not match');
+                return;
+              }
+
+              try {
+                await authService.updatePassword(newPasswordController.text);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  SnackbarHelper.showSuccess(
+                      context, 'Password updated successfully');
+                }
+              } on WeakPasswordAuthException {
+                if (context.mounted) {
+                  SnackbarHelper.showError(context, 'Password is too weak');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  SnackbarHelper.showError(
+                      context, 'Error updating password: $e');
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00897B),
+            ),
+            child: const Text('UPDATE'),
+          ),
+        ],
+      ),
+    );
+  }
+  void _showFeedbackDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send Feedback'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'We value your feedback! Please let us know how we can improve.',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE0F2F1),
+                child: Icon(Icons.email, color: Color(0xFF00897B)),
+              ),
+              title: const Text(
+                'Email Us',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text('support2travelmateteam@gmail.com'),
+              onTap: () async {
+                final Uri emailLaunchUri = Uri(
+                  scheme: 'mailto',
+                  path: 'support2travelmateteam@gmail.com',
+                  query: 'subject=TravelMate Feedback',
+                );
+
+                try {
+                  if (await canLaunchUrl(emailLaunchUri)) {
+                    await launchUrl(emailLaunchUri);
+                  } else {
+                    if (mounted) {
+                      SnackbarHelper.showError(context, 'Could not launch email app');
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    SnackbarHelper.showError(context, 'Error launching email');
+                  }
+                }
+                if (mounted) Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRatingDialog() {
+    int selectedRating = 0;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Center(child: Text('Rate Us')),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'How was your experience?',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      icon: Icon(
+                        index < selectedRating ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 32,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          selectedRating = index + 1;
+                        });
+                      },
+                    );
+                  }),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CANCEL'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (selectedRating == 0) {
+                    SnackbarHelper.showError(context, 'Please select a rating');
+                    return;
+                  }
+                  Navigator.pop(context);
+                  SnackbarHelper.showSuccess(
+                    context,
+                    'Thank you for rating us $selectedRating stars!',
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00897B),
+                ),
+                child: const Text('SUBMIT'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

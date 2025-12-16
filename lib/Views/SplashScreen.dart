@@ -24,6 +24,7 @@ class _SplashScreenState extends State<SplashScreen>
   LatLng? currentLocation;
   final MapController _mapController = MapController();
   String statusMessage = "Loading location...";
+  StreamSubscription<Position>? _positionStreamSubscription;
 
   @override
   void initState() {
@@ -93,12 +94,17 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
     // Try to get the last known location (fastest way)
-    Position? lastPos = await Geolocator.getLastKnownPosition();
-    if (lastPos != null) {
-      setState(() {
-        currentLocation = LatLng(lastPos.latitude, lastPos.longitude);
-        _mapController.move(currentLocation!, 16);
-      });
+    try {
+      Position? lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null) {
+        setState(() {
+          currentLocation = LatLng(lastPos.latitude, lastPos.longitude);
+          _mapController.move(currentLocation!, 16);
+        });
+      }
+    } catch (e) {
+      // getLastKnownPosition likely failed (e.g. on Web), ignore and proceed to getCurrentPosition
+      print('getLastKnownPosition failed (expected on Web): $e');
     }
     // Get current location if last known location is not available
     try {
@@ -118,15 +124,17 @@ class _SplashScreenState extends State<SplashScreen>
       });
     }
     // Start listening to location changes (live tracking)
-    Geolocator.getPositionStream(
+    _positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 5,
       ),
     ).listen((Position pos) {
-      setState(() {
-        currentLocation = LatLng(pos.latitude, pos.longitude);
-      });
+      if (mounted) {
+        setState(() {
+          currentLocation = LatLng(pos.latitude, pos.longitude);
+        });
+      }
     });
 
     if (currentLocation != null) {
@@ -155,6 +163,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _positionStreamSubscription?.cancel();
     _animationController.dispose();
     super.dispose();
   }

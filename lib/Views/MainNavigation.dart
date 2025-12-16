@@ -6,18 +6,21 @@ import 'package:travelmate/Views/Saved.dart';
 
 class MainNavigation extends StatefulWidget {
   final int initialIndex;
+
+  static final GlobalKey<MainNavigationState> globalKey =
+      GlobalKey<MainNavigationState>();
+
   const MainNavigation({super.key, this.initialIndex = 0});
 
-  static void switchTab(BuildContext context, int index) {
-    final state = context.findAncestorStateOfType<_MainNavigationState>();
-    state?._onNavTapped(index);
+  static void switchTab(int index) {
+    globalKey.currentState?.updateIndex(index);
   }
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class MainNavigationState extends State<MainNavigation> {
   late int _selectedIndex;
 
   @override
@@ -28,7 +31,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _views = const [HomePage(), Explore(), Saved(), Profile()];
 
-  void _onNavTapped(int index) {
+  void updateIndex(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -40,7 +43,7 @@ class _MainNavigationState extends State<MainNavigation> {
       body: _views[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: _onNavTapped,
+        onTap: updateIndex,
         selectedItemColor: const Color(0xFF00897B),
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,

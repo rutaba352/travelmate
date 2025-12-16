@@ -17,163 +17,7 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  bool _notificationsEnabled = true;
-  bool _emailNotifications = true;
-  bool _pushNotifications = true;
   bool _locationServices = true;
-  String _selectedLanguage = 'English';
-  String _selectedCurrency = 'USD';
-
-  final List<String> languages = [
-    'English',
-    'Spanish',
-    'French',
-    'German',
-    'Japanese',
-    'Chinese'
-  ];
-
-  final List<String> currencies = [
-    'USD',
-    'EUR',
-    'GBP',
-    'JPY',
-    'CNY',
-    'INR'
-  ];
-
-  void _showLanguageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: languages.length,
-            itemBuilder: (context, index) {
-              final language = languages[index];
-              return ListTile(
-                title: Text(language),
-                trailing: _selectedLanguage == language
-                    ? const Icon(Icons.check, color: Color(0xFF00897B))
-                    : null,
-                onTap: () {
-                  setState(() => _selectedLanguage = language);
-                  Navigator.pop(context);
-                  SnackbarHelper.showSuccess(
-                    context,
-                    'Language changed to $language',
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCurrencyDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Currency'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: currencies.length,
-            itemBuilder: (context, index) {
-              final currency = currencies[index];
-              return ListTile(
-                title: Text(currency),
-                trailing: _selectedCurrency == currency
-                    ? const Icon(Icons.check, color: Color(0xFF00897B))
-                    : null,
-                onTap: () {
-                  setState(() => _selectedCurrency = currency);
-                  Navigator.pop(context);
-                  SnackbarHelper.showSuccess(
-                    context,
-                    'Currency changed to $currency',
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _clearCache() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('Are you sure you want to clear all cached data?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              SnackbarHelper.showSuccess(context, 'Cache cleared successfully');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00897B),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('CLEAR'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteAccount() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone.',
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              SnackbarHelper.showError(
-                context,
-                'Account deletion initiated',
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('DELETE'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -219,67 +63,13 @@ class _SettingsState extends State<Settings> {
 
           const SizedBox(height: 20),
 
-          // Notifications Section
-          _buildSectionHeader('Notifications'),
-          _buildSettingsCard([
-            _buildSwitchTile(
-              icon: Icons.notifications_outlined,
-              title: 'Enable Notifications',
-              subtitle: 'Receive all notifications',
-              value: _notificationsEnabled,
-              onChanged: (value) {
-                setState(() => _notificationsEnabled = value);
-                SnackbarHelper.showSuccess(
-                  context,
-                  value
-                      ? 'Notifications enabled'
-                      : 'Notifications disabled',
-                );
-              },
-            ),
-            _buildDivider(),
-            _buildSwitchTile(
-              icon: Icons.email_outlined,
-              title: 'Email Notifications',
-              subtitle: 'Receive updates via email',
-              value: _emailNotifications,
-              onChanged: (value) {
-                setState(() => _emailNotifications = value);
-              },
-            ),
-            _buildDivider(),
-            _buildSwitchTile(
-              icon: Icons.phone_android,
-              title: 'Push Notifications',
-              subtitle: 'Receive push notifications',
-              value: _pushNotifications,
-              onChanged: (value) {
-                setState(() => _pushNotifications = value);
-              },
-            ),
-          ]),
+          const SizedBox(height: 20),
 
           const SizedBox(height: 20),
 
           // Preferences Section
           _buildSectionHeader('Preferences'),
           _buildSettingsCard([
-            _buildSettingsTile(
-              icon: Icons.language,
-              title: 'Language',
-              subtitle: _selectedLanguage,
-              onTap: _showLanguageDialog,
-              trailing: const Icon(Icons.chevron_right),
-            ),
-            _buildDivider(),
-            _buildSettingsTile(
-              icon: Icons.attach_money,
-              title: 'Currency',
-              subtitle: _selectedCurrency,
-              onTap: _showCurrencyDialog,
-              trailing: const Icon(Icons.chevron_right),
-            ),
-            _buildDivider(),
             _buildSwitchTile(
               icon: Icons.location_on_outlined,
               title: 'Location Services',
@@ -296,7 +86,10 @@ class _SettingsState extends State<Settings> {
               subtitle: 'Enable dark theme',
               value: Provider.of<ThemeService>(context).isDarkMode,
               onChanged: (value) {
-                Provider.of<ThemeService>(context, listen: false).toggleTheme(value);
+                Provider.of<ThemeService>(
+                  context,
+                  listen: false,
+                ).toggleTheme(value);
               },
             ),
           ]),
@@ -334,35 +127,32 @@ class _SettingsState extends State<Settings> {
               icon: Icons.info_outline,
               title: 'About',
               subtitle: 'Version 1.0.0',
-              onTap: () => SnackbarHelper.showInfo(
-                context,
-                'TravelMate v1.0.0',
-              ),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('About TravelMate'),
+                    content: const Text(
+                      'TravelMate is your ultimate travel companion, helping you discover new places, book flights and hotels, and create unforgettable memories.\n\nVersion: 1.0.0\nDeveloped by the TravelMate Team.',
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ]),
 
           const SizedBox(height: 20),
 
-          // Data & Storage Section
-          _buildSectionHeader('Data & Storage'),
-          _buildSettingsCard([
-            _buildSettingsTile(
-              icon: Icons.cloud_download_outlined,
-              title: 'Download Data',
-              subtitle: 'Download your data',
-              onTap: () => SnackbarHelper.showInfo(
-                context,
-                'Preparing download...',
-              ),
-            ),
-            _buildDivider(),
-            _buildSettingsTile(
-              icon: Icons.cleaning_services_outlined,
-              title: 'Clear Cache',
-              subtitle: 'Free up storage space',
-              onTap: _clearCache,
-            ),
-          ]),
+          const SizedBox(height: 20),
 
           const SizedBox(height: 20),
 
@@ -397,6 +187,7 @@ class _SettingsState extends State<Settings> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00897B),
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -409,14 +200,6 @@ class _SettingsState extends State<Settings> {
               },
               textColor: const Color(0xFF00897B),
             ),
-            _buildDivider(),
-            _buildSettingsTile(
-              icon: Icons.delete_forever,
-              title: 'Delete Account',
-              subtitle: 'Permanently delete your account',
-              onTap: _deleteAccount,
-              textColor: Colors.red[700]!,
-            ),
           ]),
 
           const SizedBox(height: 40),
@@ -426,10 +209,7 @@ class _SettingsState extends State<Settings> {
             child: Text(
               'TravelMate © 2024\nMade with ❤️ for travelers',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ),
           const SizedBox(height: 20),
@@ -501,16 +281,9 @@ class _SettingsState extends State<Settings> {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey[600],
-        ),
+        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
       ),
-      trailing: trailing ??
-          Icon(
-            Icons.chevron_right,
-            color: Colors.grey[400],
-          ),
+      trailing: trailing ?? Icon(Icons.chevron_right, color: Colors.grey[400]),
       onTap: onTap,
     );
   }
@@ -529,11 +302,7 @@ class _SettingsState extends State<Settings> {
           color: const Color(0xFF00897B).withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(
-          icon,
-          color: const Color(0xFF00897B),
-          size: 22,
-        ),
+        child: Icon(icon, color: const Color(0xFF00897B), size: 22),
       ),
       title: Text(
         title,
@@ -545,10 +314,7 @@ class _SettingsState extends State<Settings> {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey[600],
-        ),
+        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
       ),
       trailing: Switch(
         value: value,
@@ -559,11 +325,7 @@ class _SettingsState extends State<Settings> {
   }
 
   Widget _buildDivider() {
-    return Divider(
-      height: 1,
-      indent: 68,
-      color: Colors.grey[200],
-    );
+    return Divider(height: 1, indent: 68, color: Colors.grey[200]);
   }
 
   void _showChangePasswordDialog() {
@@ -630,6 +392,7 @@ class _SettingsState extends State<Settings> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00897B),
+              foregroundColor: Colors.white,
             ),
             child: const Text('NEXT'),
           ),
@@ -686,7 +449,8 @@ class _SettingsState extends State<Settings> {
                 SnackbarHelper.showError(context, 'Password too short');
                 return;
               }
-              if (newPasswordController.text != confirmPasswordController.text) {
+              if (newPasswordController.text !=
+                  confirmPasswordController.text) {
                 SnackbarHelper.showError(context, 'Passwords do not match');
                 return;
               }
@@ -696,7 +460,9 @@ class _SettingsState extends State<Settings> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   SnackbarHelper.showSuccess(
-                      context, 'Password updated successfully');
+                    context,
+                    'Password updated successfully',
+                  );
                 }
               } on WeakPasswordAuthException {
                 if (context.mounted) {
@@ -705,12 +471,15 @@ class _SettingsState extends State<Settings> {
               } catch (e) {
                 if (context.mounted) {
                   SnackbarHelper.showError(
-                      context, 'Error updating password: $e');
+                    context,
+                    'Error updating password: $e',
+                  );
                 }
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00897B),
+              foregroundColor: Colors.white,
             ),
             child: const Text('UPDATE'),
           ),
@@ -718,6 +487,7 @@ class _SettingsState extends State<Settings> {
       ),
     );
   }
+
   void _showFeedbackDialog() {
     showDialog(
       context: context,
@@ -754,7 +524,10 @@ class _SettingsState extends State<Settings> {
                     await launchUrl(emailLaunchUri);
                   } else {
                     if (mounted) {
-                      SnackbarHelper.showError(context, 'Could not launch email app');
+                      SnackbarHelper.showError(
+                        context,
+                        'Could not launch email app',
+                      );
                     }
                   }
                 } catch (e) {
@@ -786,7 +559,9 @@ class _SettingsState extends State<Settings> {
         builder: (context, setState) {
           return AlertDialog(
             title: const Center(child: Text('Rate Us')),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

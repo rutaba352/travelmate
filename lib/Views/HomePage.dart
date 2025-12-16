@@ -12,6 +12,9 @@ import 'package:travelmate/Views/HotelList.dart';
 
 import '../Services/location/location_storage.dart';
 import 'package:travelmate/Services/SearchHistoryService.dart';
+import 'package:travelmate/Services/API/AmadeusApiService.dart'; // Added
+import 'package:travelmate/Views/Activities.dart'; // Added
+import 'dart:math'; // Added
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -29,6 +32,7 @@ class HomePageState extends State<HomePage> {
 
   final SearchHistoryService _searchHistoryService = SearchHistoryService();
   List<Map<String, String>> _recentSearches = [];
+  List<Map<String, dynamic>> _popularDestinations = []; // Added
 
   @override
   void initState() {
@@ -37,6 +41,7 @@ class HomePageState extends State<HomePage> {
     destinationController = TextEditingController();
     _loadInitialData();
     _loadRecentSearches();
+    _loadPopularDestinations(); // Added call
 
     // Reset loading when returning to this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -128,9 +133,144 @@ class HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _loadPopularDestinations() async {
+    // Initial list of cities to fetch as "Popular"
+    final popularCities = ['Paris', 'Dubai', 'London', 'New York'];
+
+    List<Map<String, dynamic>> loadedLocations = [];
+
+    for (var city in popularCities) {
+      try {
+        final results = await AmadeusApiService().searchLocations(city);
+        if (results.isNotEmpty) {
+          // We take the best match (usually the first CITY)
+          final bestMatch = results.firstWhere(
+            (l) => l['type'] == 'CITY',
+            orElse: () => results.first,
+          );
+
+          loadedLocations.add(_decorateLocationData(bestMatch));
+        }
+      } catch (e) {
+        print('Error loading popular city $city: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _popularDestinations = loadedLocations;
+      });
+    }
+  }
+
+  // Decorate API location data with UI fields (Image, Price, Category)
+  Map<String, dynamic> _decorateLocationData(Map<String, dynamic> location) {
+    // Use city name if available (common for Airport results like Heathrow -> London)
+    final name =
+        (location['city'] != null &&
+            location['city'].toString().isNotEmpty &&
+            location['city'].toString() != location['name'])
+        ? location['city']
+        : location['name'] ?? 'Unknown';
+
+    final category = _determineCategory(name);
+
+    return {
+      'name': name,
+      'country':
+          location['country'] ??
+          location['address']?['countryName'] ??
+          'Unknown',
+      'image': _getCategoryImage(category, name),
+      'category': category,
+      'rating': (4.0 + Random().nextDouble()).toStringAsFixed(1),
+      'description':
+          'Discover the wonders of $name. Experience amazing $category activities.',
+      'price': 'PKR ${(20000 + Random().nextInt(100000)).toStringAsFixed(0)}',
+      'highlights': _generateHighlights(category),
+      'isFallback': false,
+      'raw': location,
+    };
+  }
+
+  String _determineCategory(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('beach') ||
+        lower.contains('maldives') ||
+        lower.contains('bali'))
+      return 'Beach';
+    if (lower.contains('island')) return 'Beach';
+    if (lower.contains('mountain') ||
+        lower.contains('swat') ||
+        lower.contains('hunza'))
+      return 'Nature';
+    if (lower.contains('paris') ||
+        lower.contains('rome') ||
+        lower.contains('culture'))
+      return 'Culture';
+    if (lower.contains('dubai') || lower.contains('new york'))
+      return 'Adventure';
+    if (lower.contains('bangkok') || lower.contains('food')) return 'Food';
+    return 'Culture'; // Default
+  }
+
+  String _getCategoryImage(String category, String name) {
+    // Check specific names first for better mock images
+    final lower = name.toLowerCase();
+    if (lower.contains('paris')) return 'assets/images/paris.jpg';
+    if (lower.contains('dubai')) return 'assets/images/dubai.jpg';
+    if (lower.contains('london')) return 'assets/images/london.jpg';
+    if (lower.contains('maldives')) return 'assets/images/maldives.jpg';
+    if (lower.contains('hunza')) return 'assets/images/hunza.jpg';
+    if (lower.contains('skardu')) return 'assets/images/skardu.jpg';
+    if (lower.contains('lahore')) return 'assets/images/lahore.jpg';
+    if (lower.contains('karachi')) return 'assets/images/karachi.jpg';
+    if (lower.contains('istanbul')) return 'assets/images/istanbul.jpg';
+    if (lower.contains('bangkok')) return 'assets/images/bangkok.jpg';
+    if (lower.contains('new york') || lower.contains('nyc'))
+      return 'assets/images/new_york.jpg';
+
+    switch (category.toLowerCase()) {
+      case 'beach':
+        return 'assets/images/maldives.jpg';
+      case 'nature':
+        return 'assets/images/hunza.jpg';
+      case 'adventure':
+        return 'assets/images/skardu.jpg';
+      case 'culture':
+        return 'assets/images/lahore.jpg';
+      case 'historical':
+        return 'assets/images/mohenjo_daro.jpg';
+      case 'food':
+        return 'assets/images/bangkok.jpg';
+      default:
+        return 'assets/images/placeholder.jpg';
+    }
+  }
+
+  String _generateHighlights(String category) {
+    switch (category) {
+      case 'Beach':
+        return 'Beaches, Water sports, Sunsets';
+      case 'Nature':
+        return 'Scenic views, Hiking, Photography';
+      case 'Adventure':
+        return 'Trekking, Camping, Activities';
+      case 'Culture':
+        return 'Local culture, Food, Markets';
+      case 'Historical':
+        return 'Ancient sites, Museums, Heritage';
+      case 'Food':
+        return 'Local cuisine, Street food, Restaurants';
+      default:
+        return 'Attractions, Culture, Sightseeing';
+    }
+  }
+
   Future<void> _refreshData() async {
     await Future.delayed(const Duration(seconds: 1));
     await _loadRecentSearches(); // Refresh searches too
+    await _loadPopularDestinations(); // Refresh popular destinations
     if (mounted) {
       SnackbarHelper.showSuccess(context, 'Data refreshed successfully!');
     }
@@ -263,7 +403,17 @@ class HomePageState extends State<HomePage> {
                       else
                         Column(
                           children: [
-                            buildPopularDestinations(),
+                            buildPopularDestinations(_popularDestinations, (
+                              destination,
+                            ) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      Activities(cityName: destination['name']),
+                                ),
+                              );
+                            }),
                             const SizedBox(height: 30),
                             buildQuickActions(context),
                             const SizedBox(height: 30),

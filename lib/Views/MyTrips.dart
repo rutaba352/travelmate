@@ -44,7 +44,7 @@ class _MyTripsState extends State<MyTrips> {
               onButtonPressed: () {
                 // Return to main screen then switch to Explore
                 Navigator.popUntil(context, (route) => route.isFirst);
-                MainNavigation.switchTab(context, 1); // Switch to Explore
+                MainNavigation.switchTab(1); // Switch to Explore
               },
             );
           }

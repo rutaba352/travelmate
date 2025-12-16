@@ -62,8 +62,7 @@ class _RegisterState extends State<Register> {
       return 'Please enter your email';
     }
     // Stricter Regex for email validation
-    final emailRegex =
-        RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+    final emailRegex = RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email address (e.g. user@example.com)';
     }
@@ -388,16 +387,7 @@ class _RegisterState extends State<Register> {
                         },
                       ),
                       const SizedBox(height: 12),
-                      _buildSocialButton(
-                        icon: Icons.facebook,
-                        label: 'Continue with Facebook',
-                        onPressed: () {
-                          SnackbarHelper.showInfo(
-                            context,
-                            'Facebook sign-in coming soon',
-                          );
-                        },
-                      ),
+                      const SizedBox(height: 30),
                       const SizedBox(height: 30),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -523,6 +513,7 @@ class _RegisterState extends State<Register> {
           ),
           side: BorderSide(color: Colors.grey[300]!),
           foregroundColor: const Color(0xFF263238),
+          backgroundColor: Colors.white,
         ),
       ),
     );

@@ -103,7 +103,14 @@ class _ExploreState extends State<Explore> {
 
   // Decorate API location data with UI fields (Image, Price, Category)
   Map<String, dynamic> _decorateLocationData(Map<String, dynamic> location) {
-    final name = location['name'] ?? 'Unknown';
+    // Use city name if available (common for Airport results like Heathrow -> London)
+    final name =
+        (location['city'] != null &&
+            location['city'].toString().isNotEmpty &&
+            location['city'].toString() != location['name'])
+        ? location['city']
+        : location['name'] ?? 'Unknown';
+
     final category = _determineCategory(name);
 
     return {
@@ -206,6 +213,8 @@ class _ExploreState extends State<Explore> {
     if (lower.contains('karachi')) return 'assets/images/karachi.jpg';
     if (lower.contains('istanbul')) return 'assets/images/istanbul.jpg';
     if (lower.contains('bangkok')) return 'assets/images/bangkok.jpg';
+    if (lower.contains('new york') || lower.contains('nyc'))
+      return 'assets/images/new_york.jpg';
 
     switch (category.toLowerCase()) {
       case 'beach':

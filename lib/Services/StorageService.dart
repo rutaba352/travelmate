@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -15,35 +13,47 @@ class StorageService {
           .child('$userId.jpg');
 
       print('Starting upload for userId: $userId');
-      UploadTask uploadTask;
 
-      if (kIsWeb) {
-        print('Uploading as Web Data');
-        final Uint8List bytes = await image.readAsBytes();
-        final SettableMetadata metadata = SettableMetadata(contentType: 'image/jpeg');
-        uploadTask = ref.putData(bytes, metadata);
-      } else {
-        print('Uploading as File: ${image.path}');
-        uploadTask = ref.putFile(File(image.path));
-      }
+      // Read file bytes first to ensure we can access the file locally
+      final Uint8List bytes = await image.readAsBytes();
+      print('File read successfully. Size: ${bytes.length} bytes');
+
+      final SettableMetadata metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'picked-file-path': image.path},
+      );
+
+      final UploadTask uploadTask = ref.putData(bytes, metadata);
 
       print('Waiting for upload to complete...');
-      // Add timeout for Web mainly, as it hangs if CORS not set
-      final TaskSnapshot snapshot = await uploadTask.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          if (kIsWeb) {
-             throw Exception('Upload timed out. On Web, this is often due to missing CORS configuration on Firebase Storage bucket. Please configure cors.json.');
-          }
-           throw Exception('Upload timed out. Check your internet connection.');
+
+      // Monitor the task
+      uploadTask.snapshotEvents.listen(
+        (TaskSnapshot snapshot) {
+          print(
+            'Upload progress: ${snapshot.bytesTransferred}/${snapshot.totalBytes}',
+          );
+        },
+        onError: (e) {
+          print('Upload stream error: $e');
         },
       );
-      
+
+      final TaskSnapshot snapshot = await uploadTask;
       print('Upload completed. State: ${snapshot.state}');
-      final String downloadUrl = await snapshot.ref.getDownloadURL();
-      print('Download URL: $downloadUrl');
-      return downloadUrl;
+
+      if (snapshot.state == TaskState.success) {
+        final String downloadUrl = await snapshot.ref.getDownloadURL();
+        print('Download URL: $downloadUrl');
+        return downloadUrl;
+      } else {
+        throw Exception('Upload failed with state: ${snapshot.state}');
+      }
+    } on FirebaseException catch (e) {
+      print('Firebase Exception: ${e.code} - ${e.message}');
+      throw Exception('Firebase Upload Error: ${e.message}');
     } catch (e) {
+      print('Generic Upload Error: $e');
       throw Exception('Failed to upload image: $e');
     }
   }

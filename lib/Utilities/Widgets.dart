@@ -159,13 +159,13 @@ Widget buildSearchSection(
 }
 
 // ===== Popular Destinations =====
-Widget buildPopularDestinations() {
-  final destinations = [
-    {'name': 'Paris', 'image': '🗼', 'rating': '4.8'},
-    {'name': 'Tokyo', 'image': '🗾', 'rating': '4.9'},
-    {'name': 'Dubai', 'image': '🏙️', 'rating': '4.7'},
-    {'name': 'Bali', 'image': '🏝️', 'rating': '4.8'},
-  ];
+Widget buildPopularDestinations(
+  List<Map<String, dynamic>> destinations,
+  Function(Map<String, dynamic>)? onDestinationTap,
+) {
+  if (destinations.isEmpty) {
+    return const SizedBox.shrink();
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,77 +201,92 @@ Widget buildPopularDestinations() {
           itemCount: destinations.length,
           itemBuilder: (context, index) {
             final dest = destinations[index];
-            return Container(
-              width: 140,
-              margin: const EdgeInsets.only(right: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF00897B).withOpacity(0.7),
-                          const Color(0xFF26A69A).withOpacity(0.7),
+            return GestureDetector(
+              onTap: () => onDestinationTap?.call(dest),
+              child: Container(
+                width: 140,
+                margin: const EdgeInsets.only(right: 15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 100,
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(15),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(15),
+                        ),
+                        child: Image.asset(
+                          dest['image'] ?? 'assets/images/placeholder.jpg',
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                color: const Color(0xFF00897B).withOpacity(0.3),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.location_city,
+                                    size: 40,
+                                    color: Color(0xFF00897B),
+                                  ),
+                                ),
+                              ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dest['name'] ?? 'Unknown',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                dest['rating'] ?? '4.5',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(15),
-                      ),
                     ),
-                    child: Center(
-                      child: Text(
-                        dest['image']!,
-                        style: const TextStyle(fontSize: 40),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          dest['name']!,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              dest['rating']!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -413,10 +428,7 @@ Widget buildRecentSearches(
               const SizedBox(height: 10),
               Text(
                 'No recent searches',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
             ],
           ),
@@ -441,10 +453,7 @@ Widget buildRecentSearches(
           ),
           TextButton(
             onPressed: onClear,
-            child: const Text(
-              'Clear All',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -484,10 +493,7 @@ Widget buildSearchItem(String from, String to, {VoidCallback? onDelete}) {
         Expanded(
           child: Text(
             '$from → $to',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -607,7 +613,12 @@ Widget buildAppBar(
   );
 }
 
-Widget buildStatsSection(BuildContext context, {int trips = 0, int places = 0, int photos = 0}) {
+Widget buildStatsSection(
+  BuildContext context, {
+  int trips = 0,
+  int places = 0,
+  int photos = 0,
+}) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     padding: const EdgeInsets.all(20),
@@ -635,7 +646,12 @@ Widget buildStatsSection(BuildContext context, {int trips = 0, int places = 0, i
   );
 }
 
-Widget buildStatItem(BuildContext context, String value, String label, IconData icon) {
+Widget buildStatItem(
+  BuildContext context,
+  String value,
+  String label,
+  IconData icon,
+) {
   return Column(
     children: [
       Icon(icon, color: const Color(0xFF00897B), size: 24),
@@ -713,7 +729,11 @@ Widget buildMenuItem(
   );
 }
 
-Widget buildMenuSection(VoidCallback onLogout, BuildContext context, {VoidCallback? onSettingsReturn}) {
+Widget buildMenuSection(
+  VoidCallback onLogout,
+  BuildContext context, {
+  VoidCallback? onSettingsReturn,
+}) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     decoration: BoxDecoration(
@@ -759,18 +779,13 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context, {VoidCallba
           ),
         ),
         buildDivider(),
-        buildMenuItem(
-          context,
-          'Settings',
-          Icons.settings,
-          () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const Settings()),
-            );
-            onSettingsReturn?.call();
-          },
-        ),
+        buildMenuItem(context, 'Settings', Icons.settings, () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Settings()),
+          );
+          onSettingsReturn?.call();
+        }),
         buildDivider(),
         buildMenuItem(
           context,
@@ -792,7 +807,13 @@ Widget buildMenuSection(VoidCallback onLogout, BuildContext context, {VoidCallba
           ),
         ),
         buildDivider(),
-        buildMenuItem(context, 'Logout', Icons.logout, onLogout, isDestructive: true),
+        buildMenuItem(
+          context,
+          'Logout',
+          Icons.logout,
+          onLogout,
+          isDestructive: true,
+        ),
       ],
     ),
   );
@@ -822,13 +843,13 @@ Widget buildInfoField(
       AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
-          color: enabled 
-              ? (isDarkMode ? Colors.grey[800] : Colors.grey[50]) 
+          color: enabled
+              ? (isDarkMode ? Colors.grey[800] : Colors.grey[50])
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: enabled 
-                ? const Color(0xFF00897B) 
+            color: enabled
+                ? const Color(0xFF00897B)
                 : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
           ),
         ),
@@ -837,14 +858,14 @@ Widget buildInfoField(
           enabled: enabled,
           maxLines: maxLines,
           style: TextStyle(
-            fontSize: 14, 
+            fontSize: 14,
             color: Theme.of(context).colorScheme.onSurface,
           ),
           decoration: InputDecoration(
             prefixIcon: Icon(
               icon,
-              color: enabled 
-                  ? const Color(0xFF00897B) 
+              color: enabled
+                  ? const Color(0xFF00897B)
                   : (isDarkMode ? Colors.grey[500] : Colors.grey[400]),
               size: 20,
             ),
@@ -891,7 +912,7 @@ Widget buildProfileInfo(
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-             Text(
+            Text(
               'Profile Information',
               style: TextStyle(
                 fontSize: 18,

@@ -37,7 +37,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
             title: const Text('Reset Link Sent'),
             content: Text(
               'We have sent a password reset link to $email.\n\nPlease check your inbox (and spam folder) and follow the link to reset your password.',
@@ -57,7 +59,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } on InvalidEmailAuthException {
       if (mounted) SnackbarHelper.showError(context, 'Invalid email address');
     } on UserNotFoundAuthException {
-      if (mounted) SnackbarHelper.showError(context, 'No user found with this email');
+      if (mounted) SnackbarHelper.showError(context, 'Email is not registered');
     } catch (e) {
       if (mounted) SnackbarHelper.showError(context, 'Error: $e');
     } finally {
@@ -67,7 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine if dark mode is active to adjust colors manually if needed, 
+    // Determine if dark mode is active to adjust colors manually if needed,
     // though Theme.of(context) handles most.
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -105,7 +107,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(height: 40),
@@ -142,7 +146,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         )
                       : const Text(
                           'Send Reset Link',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                 ),
               ),

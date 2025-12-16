@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PaymentMethods extends StatefulWidget {
   const PaymentMethods({super.key});
@@ -9,27 +11,66 @@ class PaymentMethods extends StatefulWidget {
 }
 
 class _PaymentMethodsState extends State<PaymentMethods> {
-  // Mock payment methods
-  List<Map<String, String>> methods = [
-    {
-      'type': 'Visa',
-      'number': '•••• •••• •••• 4242',
-      'expiry': '12/25',
-      'holder': 'John Anderson',
-      'logo':
-          'assets/images/visa_logo.png', // You might not have assets, use Icon
-    },
-    {
-      'type': 'Mastercard',
-      'number': '•••• •••• •••• 8888',
-      'expiry': '09/24',
-      'holder': 'John Anderson',
-      'logo': 'assets/images/mastercard_logo.png',
-    },
-  ];
+  String _cardHolderName = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && doc.data()!.containsKey('name')) {
+          if (mounted) {
+            setState(() {
+              _cardHolderName = doc.data()!['name'];
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _cardHolderName = 'Valued User';
+            });
+          }
+        }
+      } catch (e) {
+        print('Error fetching name: $e');
+        if (mounted) {
+          setState(() {
+            _cardHolderName = 'Valued User';
+          });
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Mock payment methods with dynamic name
+    List<Map<String, String>> methods = [
+      {
+        'type': 'Visa',
+        'number': '•••• •••• •••• 4242',
+        'expiry': '12/25',
+        'holder': _cardHolderName,
+        'logo': 'assets/images/visa_logo.png',
+      },
+      {
+        'type': 'Mastercard',
+        'number': '•••• •••• •••• 8888',
+        'expiry': '09/24',
+        'holder': _cardHolderName,
+        'logo': 'assets/images/mastercard_logo.png',
+      },
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment Methods'),
@@ -55,26 +96,12 @@ class _PaymentMethodsState extends State<PaymentMethods> {
             label: const Text('Add Date Payment Method'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00897B),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-          ),
-
-          const SizedBox(height: 30),
-          const Text(
-            'Transaction History',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 15),
-          _buildTransactionItem('Flight to Paris', 'Dec 12, 2024', '-\$450.00'),
-          _buildTransactionItem('Hotel in Dubai', 'Nov 20, 2024', '-\$250.00'),
-          _buildTransactionItem(
-            'Refund',
-            'Nov 21, 2024',
-            '+\$50.00',
-            isRefund: true,
           ),
         ],
       ),
@@ -168,68 +195,6 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                 ],
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionItem(
-    String title,
-    String date,
-    String amount, {
-    bool isRefund = false,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isRefund
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.red.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isRefund ? Icons.arrow_downward : Icons.arrow_upward,
-              color: isRefund ? Colors.green : Colors.red,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  date,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isRefund ? Colors.green : Colors.red,
-              fontSize: 16,
-            ),
           ),
         ],
       ),

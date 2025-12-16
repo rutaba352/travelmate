@@ -51,7 +51,7 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
           throw GenericAuthException();
         case 'invalid-credential':
           // This is a common error that replaces user-not-found and wrong-password
-          throw WrongPasswordAuthException();
+          throw InvalidCredentialsAuthException();
         default:
           throw GenericAuthException();
       }
@@ -135,8 +135,9 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
       );
 
       // Sign in to Firebase with the Google credential
-      final userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
 
       // Verify the user was created/signed in
       if (userCredential.user == null) {
@@ -150,7 +151,9 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
       if (user != null) return user;
       throw UserNotLoggedInAuthException();
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException during Google Sign-In: ${e.code} - ${e.message}');
+      print(
+        'FirebaseAuthException during Google Sign-In: ${e.code} - ${e.message}',
+      );
       switch (e.code) {
         case 'account-exists-with-different-credential':
           throw EmailAlreadyInUseAuthException();
@@ -162,17 +165,23 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
           throw GenericAuthException();
       }
     } on PlatformException catch (e) {
-      print('PlatformException during Google Sign-In: ${e.code} - ${e.message}');
+      print(
+        'PlatformException during Google Sign-In: ${e.code} - ${e.message}',
+      );
       // Common error codes:
       // sign_in_failed - Usually means SHA-1 not configured
       // network_error - No internet connection
       // sign_in_canceled - User canceled
       if (e.code == 'sign_in_failed') {
-        print('ERROR: sign_in_failed - This usually means SHA-1/SHA-256 fingerprints are not added to Firebase Console');
+        print(
+          'ERROR: sign_in_failed - This usually means SHA-1/SHA-256 fingerprints are not added to Firebase Console',
+        );
         print('Follow these steps:');
         print('1. Run: cd android && ./gradlew signingReport');
         print('2. Copy SHA-1 and SHA-256 from debug variant');
-        print('3. Add them to Firebase Console → Project Settings → Your Android App');
+        print(
+          '3. Add them to Firebase Console → Project Settings → Your Android App',
+        );
       }
       throw GenericAuthException();
     } catch (e) {
@@ -230,7 +239,7 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
       if (user.email == null) {
         throw GenericAuthException();
       }
-      
+
       final credential = EmailAuthProvider.credential(
         email: user.email!,
         password: password,
@@ -292,6 +301,12 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
   @override
   Future<void> sendPasswordReset({required String toEmail}) async {
     try {
+      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
+        toEmail,
+      );
+      if (methods.isEmpty) {
+        throw UserNotFoundAuthException();
+      }
       await FirebaseAuth.instance.sendPasswordResetEmail(email: toEmail);
       print('Password reset email sent to: $toEmail');
     } on FirebaseAuthException catch (e) {

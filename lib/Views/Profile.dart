@@ -280,9 +280,7 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
               () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const EditProfile(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const EditProfile()),
                 );
                 _loadUserData();
               },
@@ -332,8 +330,11 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                       context,
                     ),
                     const SizedBox(height: 20),
-                    buildMenuSection(_showLogoutDialog, context,
-                        onSettingsReturn: _loadUserData),
+                    buildMenuSection(
+                      _showLogoutDialog,
+                      context,
+                      onSettingsReturn: _loadUserData,
+                    ),
                     const SizedBox(height: 20),
                     // Developer Tools
                     ExpansionTile(
@@ -420,7 +421,6 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                   TextButton(
                     onPressed: () {
                       MainNavigation.switchTab(
-                        context,
                         2,
                       ); // Switch to My Trips (Need to add My Trips tab or navigate)
                       // Actually My Trips is a separate page usually reachable from "See All"

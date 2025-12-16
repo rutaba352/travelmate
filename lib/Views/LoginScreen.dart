@@ -61,10 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final email = _emailController.text.trim();
         final password = _passwordController.text;
 
-        await _authService.logIn(
-          email: email,
-          password: password,
-        );
+        await _authService.logIn(email: email, password: password);
 
         // Handle Remember Me
         if (_rememberMe) {
@@ -86,16 +83,16 @@ class _LoginScreenState extends State<LoginScreen> {
           // Navigate to home
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
+            MaterialPageRoute(
+              builder: (context) =>
+                  MainNavigation(key: MainNavigation.globalKey),
+            ),
           );
         }
       } on UserNotFoundAuthException {
         setState(() => _isLoading = false);
         if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            'User not found. Please check your email.',
-          );
+          SnackbarHelper.showError(context, 'Email is not registered.');
         }
       } on WrongPasswordAuthException {
         setState(() => _isLoading = false);
@@ -104,6 +101,11 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
             'Wrong password. Please try again.',
           );
+        }
+      } on InvalidCredentialsAuthException {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          SnackbarHelper.showError(context, 'Invalid email or password.');
         }
       } on InvalidEmailAuthException {
         setState(() => _isLoading = false);
@@ -146,7 +148,9 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navigate to home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          MaterialPageRoute(
+            builder: (context) => MainNavigation(key: MainNavigation.globalKey),
+          ),
         );
       }
     } on EmailAlreadyInUseAuthException {
@@ -234,7 +238,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Sign in to continue your journey',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -246,9 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'Enter your email',
-                      prefixIcon: const Icon(
-                        Icons.email_outlined,
-                      ),
+                      prefixIcon: const Icon(Icons.email_outlined),
                       // Borders are handled by Theme
                     ),
                     validator: (value) {
@@ -270,9 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       hintText: 'Enter your password',
-                      prefixIcon: const Icon(
-                        Icons.lock_outline,
-                      ),
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible

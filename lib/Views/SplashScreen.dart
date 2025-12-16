@@ -124,18 +124,19 @@ class _SplashScreenState extends State<SplashScreen>
       });
     }
     // Start listening to location changes (live tracking)
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
-    ).listen((Position pos) {
-      if (mounted) {
-        setState(() {
-          currentLocation = LatLng(pos.latitude, pos.longitude);
+    _positionStreamSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 5,
+          ),
+        ).listen((Position pos) {
+          if (mounted) {
+            setState(() {
+              currentLocation = LatLng(pos.latitude, pos.longitude);
+            });
+          }
         });
-      }
-    });
 
     if (currentLocation != null) {
       LocationStorage.userLocation = currentLocation;
@@ -150,7 +151,9 @@ class _SplashScreenState extends State<SplashScreen>
       if (user != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          MaterialPageRoute(
+            builder: (context) => MainNavigation(key: MainNavigation.globalKey),
+          ),
         );
       } else {
         Navigator.pushReplacement(

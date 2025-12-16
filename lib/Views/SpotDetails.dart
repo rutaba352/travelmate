@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Views/MapView.dart';
+import 'package:travelmate/Services/BookingService.dart';
 
 class SpotDetails extends StatefulWidget {
   final Map<String, dynamic>? spotData;
@@ -90,8 +91,180 @@ class _SpotDetailsState extends State<SpotDetails>
     );
   }
 
-  void _bookTicket() {
-    SnackbarHelper.showSuccess(context, 'Proceeding to ticket booking...');
+  Future<void> _bookTicket() async {
+    DateTime? selectedDate = DateTime.now();
+    int tickets = 1;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Book Tickets',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF263238),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Select Date',
+                        style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate!,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: const ColorScheme.light(
+                                    primary: Color(0xFF00897B)),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (picked != null) {
+                          setModalState(() => selectedDate = picked);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const Icon(Icons.calendar_today,
+                                color: Color(0xFF00897B)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Tickets',
+                            style: TextStyle(fontSize: 16, color: Colors.grey)),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline),
+                              onPressed: () {
+                                if (tickets > 1) {
+                                  setModalState(() => tickets--);
+                                }
+                              },
+                              color: const Color(0xFF00897B),
+                            ),
+                            Text(
+                              '$tickets',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline),
+                              onPressed: () {
+                                setModalState(() => tickets++);
+                              },
+                              color: const Color(0xFF00897B),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          final bookingData = Map<String, dynamic>.from(
+                              widget.spotData ?? {});
+                          
+                          // Normalize data for MyTrips
+                          bookingData['startDate'] =
+                              "${selectedDate!.day} ${_getMonthName(selectedDate!.month)} ${selectedDate!.year}";
+                          bookingData['tickets'] = tickets;
+                          bookingData['category'] = 'Activities'; // Important
+                          bookingData['status'] = 'Upcoming';
+                          
+                          // Ensure title logic matches Service
+                          if (bookingData['name'] == null && bookingData['title'] == null) {
+                             bookingData['name'] = 'Unknown Tour';
+                          }
+
+                          // Use BookingService
+                          try {
+                             final success = await BookingService().createBooking(bookingData);
+                             if (success) {
+                               SnackbarHelper.showSuccess(context, 'Tour booked successfully!');
+                             } else {
+                               SnackbarHelper.showError(context, 'Failed to book tour.');
+                             }
+                          } catch (e) {
+                              // Service might not be imported yet, assume success for UI or needs import
+                              // But we need to add import. 
+                              SnackbarHelper.showError(context, 'Service Error: $e');
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00897B),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Confirm Booking',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
   }
 
   void _shareSpot() {

@@ -61,9 +61,11 @@ class _RegisterState extends State<Register> {
     if (value == null || value.isEmpty) {
       return 'Please enter your email';
     }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    // Stricter Regex for email validation
+    final emailRegex =
+        RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
     if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
+      return 'Please enter a valid email address (e.g. user@example.com)';
     }
     return null;
   }

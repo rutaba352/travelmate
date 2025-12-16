@@ -4,6 +4,7 @@ import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
 import 'package:travelmate/Services/TouristSpotService.dart';
 import 'package:travelmate/Views/MapView.dart';
+import 'package:travelmate/Views/SpotDetails.dart';
 
 class TouristSpotsList extends StatefulWidget {
   final String? cityName;
@@ -112,20 +113,10 @@ class _TouristSpotsListState extends State<TouristSpotsList> {
   }
 
   void _viewSpotDetails(Map<String, dynamic> spot) {
-    // Show a simple dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(spot['name']),
-        content: Text(
-          '${spot['description']}\n\nEntry Fee: ${spot['entryFee']}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SpotDetails(spotData: spot),
       ),
     );
   }

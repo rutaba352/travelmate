@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Views/SplashScreen.dart';
-import 'package:travelmate/Utilities/AppNavigator (1).dart';
+import 'package:provider/provider.dart';
+import 'package:travelmate/Services/ThemeService.dart';
+import 'package:travelmate/Utilities/AppTheme.dart';
+import 'package:travelmate/Utilities/AppNavigator.dart';
 
 // Removed unused MainNavigation import as per lint, but ensuring check.
 // If AppNavigator references routes that use MainNavigation internally logic wise, fine.
@@ -10,9 +13,15 @@ import 'package:travelmate/Utilities/AppNavigator (1).dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  final authService = AuthService.firebase();
-  await authService.initialize();
+  try {
+    // Initialize Firebase
+    final authService = AuthService.firebase();
+    await authService.initialize();
+  } catch (e) {
+    print('Error initializing app: $e');
+    // You might want to run a simple error app here if initialization fails
+    // runApp(ErrorApp(error: e.toString()));
+  }
 
   runApp(const TravelMate());
 }
@@ -22,25 +31,22 @@ class TravelMate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TravelMate',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        primaryColor: Colors.teal.shade600,
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Poppins',
-        useMaterial3: true,
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          },
-        ),
+    return ChangeNotifierProvider(
+      create: (_) => ThemeService(),
+      child: Consumer<ThemeService>(
+        builder: (context, themeService, child) {
+          return MaterialApp(
+            title: 'TravelMate',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeService.themeMode,
+            initialRoute: '/',
+            onGenerateRoute: AppNavigator.generateRoute,
+            home: const SplashScreen(),
+          );
+        },
       ),
-      initialRoute: '/',
-      onGenerateRoute: AppNavigator.generateRoute,
-      home: const SplashScreen(),
     );
   }
 }

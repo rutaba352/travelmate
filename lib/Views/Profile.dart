@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:travelmate/Services/Auth/AuthException.dart';
 import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Services/UserService.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/Widgets.dart';
 import 'package:travelmate/Services/SavedItemsService.dart';
+import 'package:travelmate/Views/EditProfile.dart';
 import 'package:travelmate/Views/LoginScreen.dart';
 import 'package:travelmate/Views/MyTrips.dart';
 import 'package:travelmate/Services/DataSeeder.dart';
 import 'package:travelmate/Views/MainNavigation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:travelmate/Services/StorageService.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -184,6 +189,84 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
     }
   }
 
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    print('Picking image from source: $source');
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source);
+
+      if (image == null) {
+        print('No image picked');
+        return;
+      }
+      print('Image picked: ${image.path}');
+
+      setState(() => _isLoading = true);
+
+      // Upload
+      final storageService = StorageService();
+      print('Calling uploadProfileImage...');
+      final downloadUrl = await storageService.uploadProfileImage(
+        image,
+        _authService.currentUser!.id,
+      );
+      print('Upload finished. URL: $downloadUrl');
+
+      // Update Auth
+      print('Updating user profile...');
+      await _authService.updateUser(photoURL: downloadUrl);
+
+      // Refresh
+      await _loadUserData();
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'Profile photo updated!');
+      }
+    } catch (e) {
+      print('Error in _pickAndUploadImage: $e');
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Error updating photo: $e');
+      }
+    } finally {
+      print('Finished _pickAndUploadImage');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showImageSourceDialog() {
+    // Check for Desktop (Windows/Linux/MacOS) where camera might not be supported directly
+    // simplified: just show both options, but knowing they might open file picker
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -194,12 +277,18 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
           slivers: [
             buildAppBar(
               _isEditing,
-              () {
-                setState(() => _isEditing = true);
-                SnackbarHelper.showInfo(context, 'Edit mode enabled');
+              () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EditProfile(),
+                  ),
+                );
+                _loadUserData();
               },
               photoURL: _photoURL,
               userName: _nameController.text,
+              onPhotoTap: _showImageSourceDialog,
             ),
             SliverToBoxAdapter(
               child: FadeTransition(
@@ -219,6 +308,7 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                             final savedCount = savedSnapshot.data?.length ?? 0;
 
                             return buildStatsSection(
+                              context,
                               trips: bookingsCount,
                               places: savedCount,
                               photos: 12, // Placeholder
@@ -242,7 +332,8 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                       context,
                     ),
                     const SizedBox(height: 20),
-                    buildMenuSection(_showLogoutDialog, context),
+                    buildMenuSection(_showLogoutDialog, context,
+                        onSettingsReturn: _loadUserData),
                     const SizedBox(height: 20),
                     // Developer Tools
                     ExpansionTile(
@@ -362,7 +453,7 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                     margin: const EdgeInsets.only(right: 12, bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(

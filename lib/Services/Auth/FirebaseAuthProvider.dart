@@ -224,6 +224,72 @@ class FirebaseAuthProvider implements my_auth.AuthProvider {
   }
 
   @override
+  Future<void> reauthenticate(String password) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (user.email == null) {
+        throw GenericAuthException();
+      }
+      
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+
+      try {
+        await user.reauthenticateWithCredential(credential);
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+          throw WrongPasswordAuthException();
+        } else {
+          throw GenericAuthException();
+        }
+      } catch (_) {
+        throw GenericAuthException();
+      }
+    } else {
+      throw UserNotLoggedInAuthException();
+    }
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await user.updatePassword(newPassword);
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'weak-password') {
+          throw WeakPasswordAuthException();
+        } else if (e.code == 'requires-recent-login') {
+          throw GenericAuthException(); // Should be handled by reauth
+        } else {
+          throw GenericAuthException();
+        }
+      } catch (_) {
+        throw GenericAuthException();
+      }
+    } else {
+      throw UserNotLoggedInAuthException();
+    }
+  }
+
+  @override
+  Future<void> updateUser({String? displayName, String? photoURL}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (displayName != null) {
+        await user.updateDisplayName(displayName);
+      }
+      if (photoURL != null) {
+        await user.updatePhotoURL(photoURL);
+      }
+    } else {
+      throw UserNotLoggedInAuthException();
+    }
+  }
+
+  @override
   Future<void> sendPasswordReset({required String toEmail}) async {
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: toEmail);

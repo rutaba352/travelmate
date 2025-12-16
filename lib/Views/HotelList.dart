@@ -250,73 +250,26 @@ class _HotelListState extends State<HotelList> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              title: const Text('Book Hotel'),
-                              content: Text(
-                                'Book ${hotel.name} for your trip?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    Navigator.pop(context);
+                        // MapView inside HotelDetails expects lat/lng
+                        final hotelMap = {
+                          'id': hotel.id,
+                          'name': hotel.name,
+                          'location': hotel.location,
+                          'description': hotel.description,
+                          'rating': hotel.rating,
+                          'price': 'PKR ${hotel.price}',
+                          'image': hotel.imagePath,
+                          'amenities': hotel.amenities,
+                          'lat': hotel.lat,
+                          'lng': hotel.lng,
+                        };
 
-                                    // Persistent Booking Connection via BookingService
-                                    final bookedHotel = {
-                                      'name': hotel.name,
-                                      'location': hotel.location,
-                                      'rating': hotel.rating,
-                                      'price': 'PKR ${hotel.price}',
-                                      'amenities': hotel.amenities,
-                                      'image': hotel.imagePath,
-                                      'description': hotel.description,
-                                      'category': 'Hotels', // Important
-                                      'type': 'hotel',
-                                      'id': hotel.id,
-                                      'date': DateTime.now().toString().split(
-                                        ' ',
-                                      )[0],
-                                    };
-
-                                    final success = await BookingService()
-                                        .createBooking(bookedHotel);
-
-                                    if (success) {
-                                      if (context.mounted) {
-                                        SnackbarHelper.showSuccess(
-                                          context,
-                                          '${hotel.name} booked successfully!',
-                                        );
-                                      }
-                                    } else {
-                                      if (context.mounted) {
-                                        SnackbarHelper.showError(
-                                          context,
-                                          'Failed to book ${hotel.name}',
-                                        );
-                                      }
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal.shade600,
-                                  ),
-                                  child: const Text(
-                                    'Confirm',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                HotelDetails(hotelData: hotelMap),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(

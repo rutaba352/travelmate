@@ -11,6 +11,7 @@ import 'package:travelmate/Views/TouristSpotsList.dart';
 import 'package:travelmate/Views/HotelList.dart';
 
 import '../Services/location/location_storage.dart';
+import 'package:travelmate/Services/SearchHistoryService.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -26,12 +27,16 @@ class HomePageState extends State<HomePage> {
   bool hasError = false;
   bool showEmptyState = false;
 
+  final SearchHistoryService _searchHistoryService = SearchHistoryService();
+  List<Map<String, String>> _recentSearches = [];
+
   @override
   void initState() {
     super.initState();
     startLocationController = TextEditingController();
     destinationController = TextEditingController();
     _loadInitialData();
+    _loadRecentSearches();
 
     // Reset loading when returning to this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,6 +47,25 @@ class HomePageState extends State<HomePage> {
         });
       }
     });
+  }
+
+  Future<void> _loadRecentSearches() async {
+    final searches = await _searchHistoryService.getSearches();
+    if (mounted) {
+      setState(() {
+        _recentSearches = searches;
+      });
+    }
+  }
+
+  Future<void> _clearAllSearches() async {
+    await _searchHistoryService.clearSearches();
+    _loadRecentSearches();
+  }
+
+  Future<void> _deleteSearch(int index) async {
+    await _searchHistoryService.deleteSearch(index);
+    _loadRecentSearches();
   }
 
   @override
@@ -106,6 +130,7 @@ class HomePageState extends State<HomePage> {
 
   Future<void> _refreshData() async {
     await Future.delayed(const Duration(seconds: 1));
+    await _loadRecentSearches(); // Refresh searches too
     if (mounted) {
       SnackbarHelper.showSuccess(context, 'Data refreshed successfully!');
     }
@@ -121,15 +146,22 @@ class HomePageState extends State<HomePage> {
       return;
     }
 
+    final String from = startLocationController.text;
+    final String to = destinationController.text;
+
+    // Save search
+    _searchHistoryService.addSearch(from, to).then((_) {
+      _loadRecentSearches();
+    });
+
     // Navigate to SearchResults screen
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SearchResults(
-          startLocation: startLocationController.text,
-          destination: destinationController.text,
-          query:
-              '${startLocationController.text} to ${destinationController.text}',
+          startLocation: from,
+          destination: to,
+          query: '$from to $to',
         ),
       ),
     ).then((_) {
@@ -139,6 +171,7 @@ class HomePageState extends State<HomePage> {
           isLoading = false;
           hasError = false;
         });
+        _loadRecentSearches(); // Refresh in case anything changed
       }
     });
   }
@@ -175,6 +208,7 @@ class HomePageState extends State<HomePage> {
                       buildHeader(),
                       const SizedBox(height: 30),
                       buildSearchSection(
+                        context,
                         startLocationController,
                         destinationController,
                         onSearch: _performSearch,
@@ -233,7 +267,11 @@ class HomePageState extends State<HomePage> {
                             const SizedBox(height: 30),
                             buildQuickActions(context),
                             const SizedBox(height: 30),
-                            buildRecentSearches(),
+                            buildRecentSearches(
+                              _recentSearches,
+                              _clearAllSearches,
+                              _deleteSearch,
+                            ),
                           ],
                         ),
                     ],

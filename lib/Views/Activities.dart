@@ -3,11 +3,13 @@ import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Utilities/LoadingIndicator.dart';
 import 'package:travelmate/Services/SavedItemsService.dart';
+import 'package:travelmate/Services/ActivityService.dart';
 
 class Activities extends StatefulWidget {
+  final String? cityId;
   final String? cityName;
 
-  const Activities({Key? key, this.cityName}) : super(key: key);
+  const Activities({Key? key, this.cityName, this.cityId}) : super(key: key);
 
   @override
   State<Activities> createState() => _ActivitiesState();
@@ -42,198 +44,39 @@ class _ActivitiesState extends State<Activities> {
     super.dispose();
   }
 
-  void _loadActivities() {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadActivities() async {
+    setState(() => _isLoading = true);
 
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _activities = [
-          // ===== ADVENTURE =====
-          {
-            'id': '1',
-            'name': 'Mountain Trekking',
-            'category': 'Adventure',
-            'image': 'assets/images/trekking.jpeg',
-            'location': 'Highland Peaks',
-            'duration': '6 hours',
-            'price': '\$95',
-            'rating': 4.7,
-            'reviews': 287,
-            'description': 'Challenging hike with breathtaking mountain views.',
-            'difficulty': 'Hard',
-            'isSaved': false,
-          },
-          {
-            'id': '2',
-            'name': 'Paragliding Adventure',
-            'category': 'Adventure',
-            'image': 'assets/images/paragliding.jpeg',
-            'location': 'Sky Valley',
-            'duration': '2 hours',
-            'price': '\$120',
-            'rating': 4.9,
-            'reviews': 156,
-            'description': 'Soar above scenic landscapes with expert pilots.',
-            'difficulty': 'Moderate',
-            'isSaved': false,
-          },
-
-          // ===== CULTURE =====
-          {
-            'id': '3',
-            'name': 'Heritage Site Tour',
-            'category': 'Culture',
-            'image': 'assets/images/heritage.jpeg',
-            'location': 'Historic District',
-            'duration': '3 hours',
-            'price': '\$45',
-            'rating': 4.6,
-            'reviews': 234,
-            'description': 'Explore ancient ruins with expert guides.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-          {
-            'id': '4',
-            'name': 'Traditional Craft Workshop',
-            'category': 'Culture',
-            'image': 'assets/images/craft.jpeg',
-            'location': 'Artisan Village',
-            'duration': '2.5 hours',
-            'price': '\$65',
-            'rating': 4.8,
-            'reviews': 189,
-            'description': 'Learn traditional crafts from local artisans.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-
-          // ===== FOOD =====
-          {
-            'id': '5',
-            'name': 'Street Food Crawl',
-            'category': 'Food',
-            'image': 'assets/images/food.jpeg',
-            'location': 'Downtown Markets',
-            'duration': '4 hours',
-            'price': '\$55',
-            'rating': 4.9,
-            'reviews': 312,
-            'description': 'Taste authentic local street food specialties.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-          {
-            'id': '6',
-            'name': 'Cooking Masterclass',
-            'category': 'Food',
-            'image': 'assets/images/class.jpeg',
-            'location': 'Culinary Studio',
-            'duration': '3 hours',
-            'price': '\$75',
-            'rating': 4.7,
-            'reviews': 267,
-            'description': 'Cook traditional dishes with expert chefs.',
-            'difficulty': 'Moderate',
-            'isSaved': false,
-          },
-
-          // ===== SPORTS =====
-          {
-            'id': '7',
-            'name': 'Water Sports Day',
-            'category': 'Sports',
-            'image': 'assets/images/sports.jpeg',
-            'location': 'Crystal Bay',
-            'duration': '5 hours',
-            'price': '\$90',
-            'rating': 4.6,
-            'reviews': 198,
-            'description': 'Jet skiing, kayaking and paddleboarding.',
-            'difficulty': 'Moderate',
-            'isSaved': false,
-          },
-          {
-            'id': '8',
-            'name': 'Skiing Experience',
-            'category': 'Sports',
-            'image': 'assets/images/skiing.jpeg',
-            'location': 'Snowpeak Resort',
-            'duration': 'Full day',
-            'price': '\$150',
-            'rating': 4.8,
-            'reviews': 145,
-            'description': 'Ski lessons on pristine mountain slopes.',
-            'difficulty': 'Hard',
-            'isSaved': false,
-          },
-
-          // ===== RELAXATION =====
-          {
-            'id': '9',
-            'name': 'Spa & Wellness Day',
-            'category': 'Relaxation',
-            'image': 'assets/images/spa.jpeg',
-            'location': 'Tranquil Gardens',
-            'duration': '3 hours',
-            'price': '\$110',
-            'rating': 4.9,
-            'reviews': 432,
-            'description': 'Full body massage and relaxation therapy.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-          {
-            'id': '10',
-            'name': 'Beach Relaxation',
-            'category': 'Relaxation',
-            'image': 'assets/images/beach.jpeg',
-            'location': 'Paradise Cove',
-            'duration': 'Flexible',
-            'price': '\$40',
-            'rating': 4.7,
-            'reviews': 289,
-            'description': 'Lounge chairs, umbrella and refreshments.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-
-          // ===== ENTERTAINMENT =====
-          {
-            'id': '11',
-            'name': 'Nightlife Exploration',
-            'category': 'Entertainment',
-            'image': 'assets/images/nightlife.jpeg',
-            'location': 'City Center',
-            'duration': '4 hours',
-            'price': '\$65',
-            'rating': 4.5,
-            'reviews': 378,
-            'description': 'Visit top bars and clubs with local guide.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-          {
-            'id': '12',
-            'name': 'Live Music Performance',
-            'category': 'Entertainment',
-            'image': 'assets/images/live_music.jpeg',
-            'location': 'Concert Hall',
-            'duration': '2.5 hours',
-            'price': '\$50',
-            'rating': 4.8,
-            'reviews': 412,
-            'description': 'Enjoy performances by talented artists.',
-            'difficulty': 'Easy',
-            'isSaved': false,
-          },
-        ];
-        _filteredActivities = List.from(_activities);
-        _isLoading = false;
-      });
-    });
+    try {
+      // If cityId is provided, fetch from Firestore
+      if (widget.cityId != null) {
+        // Import service at top level, but for now assuming it's available or will be added
+        // Adding dynamic import trick isn't ideal, better to rely on file level import
+        // which we added in previous steps or will add.
+        // Assuming 'package:travelmate/Services/ActivityService.dart' is imported.
+        final activities = await ActivityService().getActivities(widget.cityId!);
+        
+        if (mounted) {
+          setState(() {
+            _activities = activities;
+            _filteredActivities = activities;
+            _isLoading = false;
+          });
+        }
+      } else {
+        // Fallback to empty or placeholder if no city
+         setState(() {
+            _activities = [];
+            _filteredActivities = [];
+            _isLoading = false;
+          });
+      }
+    } catch (e) {
+      print('Error loading activities: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _filterActivities() {
@@ -533,7 +376,7 @@ class _ActivitiesState extends State<Activities> {
                       ? const EmptyState(
                           icon: Icons.local_activity_outlined,
                           title: 'No Activities Found',
-                          message: 'Try adjusting your filters',
+                          message: 'No activities available for this location yet.',
                         )
                       : _buildActivitiesList(),
                 ),

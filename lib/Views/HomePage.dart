@@ -411,7 +411,10 @@ class HomePageState extends State<HomePage> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      Activities(cityName: destination['name']),
+                                      Activities(
+                                        cityName: destination['name'],
+                                        cityId: destination['name'].toString().toLowerCase(),
+                                      ),
                                 ),
                               );
                             }),

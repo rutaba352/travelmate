@@ -294,7 +294,10 @@ class _ExploreState extends State<Explore> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Activities(cityName: destination['name']),
+        builder: (context) => Activities(
+          cityName: destination['name'],
+          cityId: destination['name'].toString().toLowerCase(),
+        ),
       ),
     );
   }

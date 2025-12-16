@@ -35,17 +35,7 @@ Widget buildHeader() {
           ),
         ],
       ),
-      Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF00897B).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          color: const Color(0xFF00897B),
-          onPressed: () {},
-        ),
-      ),
+
     ],
   );
 }

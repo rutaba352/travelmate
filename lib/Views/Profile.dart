@@ -416,6 +416,44 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                             }
                           },
                         ),
+                        // Add this new list tile:
+                        ListTile(
+                          leading: const Icon(
+                            Icons.local_activity,
+                            color: Colors.blue,
+                          ),
+                          title: const Text('Seed Activities (Paris/Lahore)'),
+                          subtitle: const Text('Upload sample activities to Firestore'),
+                          onTap: () async {
+                              try {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (ctx) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+
+                                await DataSeeder().seedActivities();
+
+                                if (context.mounted) {
+                                  Navigator.pop(context); 
+                                  SnackbarHelper.showSuccess(
+                                    context,
+                                    'Activities Seeded Successfully!',
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  SnackbarHelper.showError(
+                                    context,
+                                    'Seeding Failed: $e',
+                                  );
+                                }
+                              }
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),

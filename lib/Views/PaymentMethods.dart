@@ -22,18 +22,32 @@ class _PaymentMethodsState extends State<PaymentMethods> {
   Future<void> _fetchUserName() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // 1. Try to use Auth Display Name first (Instant)
+      if (user.displayName != null && user.displayName!.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _cardHolderName = user.displayName!;
+          });
+        }
+      }
+
+      // 2. Try to fetch from Firestore (for potential updates)
       try {
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
         if (doc.exists && doc.data()!.containsKey('name')) {
-          if (mounted) {
-            setState(() {
-              _cardHolderName = doc.data()!['name'];
-            });
+          final firestoreName = doc.data()!['name'].toString();
+          if (firestoreName.isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                _cardHolderName = firestoreName;
+              });
+            }
           }
-        } else {
+        } else if (_cardHolderName == 'Loading...') {
+          // If Firestore fails/empty AND we still have 'Loading...' (meaning Auth name failed too)
           if (mounted) {
             setState(() {
               _cardHolderName = 'Valued User';
@@ -42,7 +56,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
         }
       } catch (e) {
         print('Error fetching name: $e');
-        if (mounted) {
+        if (_cardHolderName == 'Loading...' && mounted) {
           setState(() {
             _cardHolderName = 'Valued User';
           });
@@ -87,22 +101,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
           ...methods.map((method) => _buildCardItem(method)).toList(),
 
           const SizedBox(height: 25),
-          ElevatedButton.icon(
-            onPressed: () => SnackbarHelper.showInfo(
-              context,
-              'Add Card Feature coming soon',
-            ),
-            icon: const Icon(Icons.add),
-            label: const Text('Add Date Payment Method'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00897B),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
+          
         ],
       ),
     );

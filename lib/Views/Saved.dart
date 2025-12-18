@@ -65,7 +65,7 @@ class _SavedState extends State<Saved> {
               message: 'Your favorite destinations will appear here',
               buttonText: 'Start Exploring',
               onButtonPressed: () {
-                MainNavigation.switchTab(1); // Switch to Explore Tab
+                MainNavigation.switchTab(context, 1); // Switch to Explore Tab
               },
             );
           }

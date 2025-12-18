@@ -14,6 +14,7 @@ import '../Services/location/location_storage.dart';
 import 'package:travelmate/Services/SearchHistoryService.dart';
 import 'package:travelmate/Services/API/AmadeusApiService.dart'; // Added
 import 'package:travelmate/Views/Activities.dart'; // Added
+import 'package:travelmate/Views/MainNavigation.dart';
 import 'dart:math'; // Added
 
 class HomePage extends StatefulWidget {
@@ -26,7 +27,7 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   late TextEditingController startLocationController;
   late TextEditingController destinationController;
-  bool isLoading = false;
+  bool isLoading = true; // Initialize to true
   bool hasError = false;
   bool showEmptyState = false;
 
@@ -42,16 +43,6 @@ class HomePageState extends State<HomePage> {
     _loadInitialData();
     _loadRecentSearches();
     _loadPopularDestinations(); // Added call
-
-    // Reset loading when returning to this screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-          hasError = false;
-        });
-      }
-    });
   }
 
   Future<void> _loadRecentSearches() async {
@@ -81,7 +72,7 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadInitialData() async {
-    setState(() => isLoading = true);
+    // isLoading is already true by default
 
     try {
       await Future.delayed(const Duration(seconds: 2));
@@ -404,20 +395,25 @@ class HomePageState extends State<HomePage> {
                       else
                         Column(
                           children: [
-                            buildPopularDestinations(_popularDestinations, (
-                              destination,
-                            ) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      Activities(
-                                        cityName: destination['name'],
-                                        cityId: destination['name'].toString().toLowerCase(),
-                                      ),
-                                ),
-                              );
-                            }),
+                            buildPopularDestinations(
+                              _popularDestinations,
+                              (destination) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => Activities(
+                                      cityName: destination['name'],
+                                      cityId: destination['name']
+                                          .toString()
+                                          .toLowerCase(),
+                                    ),
+                                  ),
+                                );
+                              },
+                              onSeeAllTap: () {
+                                MainNavigation.switchTab(context, 1);
+                              },
+                            ),
                             const SizedBox(height: 30),
                             buildQuickActions(context),
                             const SizedBox(height: 30),

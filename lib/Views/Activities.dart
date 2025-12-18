@@ -54,8 +54,10 @@ class _ActivitiesState extends State<Activities> {
         // Adding dynamic import trick isn't ideal, better to rely on file level import
         // which we added in previous steps or will add.
         // Assuming 'package:travelmate/Services/ActivityService.dart' is imported.
-        final activities = await ActivityService().getActivities(widget.cityId!);
-        
+        final activities = await ActivityService().getActivities(
+          widget.cityId!,
+        );
+
         if (mounted) {
           setState(() {
             _activities = activities;
@@ -65,11 +67,11 @@ class _ActivitiesState extends State<Activities> {
         }
       } else {
         // Fallback to empty or placeholder if no city
-         setState(() {
-            _activities = [];
-            _filteredActivities = [];
-            _isLoading = false;
-          });
+        setState(() {
+          _activities = [];
+          _filteredActivities = [];
+          _isLoading = false;
+        });
       }
     } catch (e) {
       print('Error loading activities: $e');
@@ -159,12 +161,26 @@ class _ActivitiesState extends State<Activities> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
-                        child: Image.asset(
-                          activity['image'],
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        ),
+                        child:
+                            (activity['image'] != null &&
+                                activity['image'].toString().startsWith('http'))
+                            ? Image.network(
+                                activity['image'],
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.broken_image, size: 30),
+                              )
+                            : Image.asset(
+                                activity['image'] ??
+                                    'assets/images/placeholder.jpg',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.broken_image, size: 30),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -376,7 +392,8 @@ class _ActivitiesState extends State<Activities> {
                       ? const EmptyState(
                           icon: Icons.local_activity_outlined,
                           title: 'No Activities Found',
-                          message: 'No activities available for this location yet.',
+                          message:
+                              'No activities available for this location yet.',
                         )
                       : _buildActivitiesList(),
                 ),
@@ -488,12 +505,39 @@ class _ActivitiesState extends State<Activities> {
                       top: Radius.circular(16),
                     ),
                   ),
-                  child: Image.asset(
-                    activity['image'],
-                    width: double.infinity,
-                    height: 160,
-                    fit: BoxFit.cover,
-                  ),
+                  child:
+                      (activity['image'] != null &&
+                          activity['image'].toString().startsWith('http'))
+                      ? Image.network(
+                          activity['image'],
+                          width: double.infinity,
+                          height: 160,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          activity['image'] ?? 'assets/images/placeholder.jpg',
+                          width: double.infinity,
+                          height: 160,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        ),
                 ),
                 Positioned(
                   top: 12,

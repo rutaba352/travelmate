@@ -35,7 +35,6 @@ Widget buildHeader() {
           ),
         ],
       ),
-
     ],
   );
 }
@@ -151,8 +150,9 @@ Widget buildSearchSection(
 // ===== Popular Destinations =====
 Widget buildPopularDestinations(
   List<Map<String, dynamic>> destinations,
-  Function(Map<String, dynamic>)? onDestinationTap,
-) {
+  Function(Map<String, dynamic>)? onDestinationTap, {
+  VoidCallback? onSeeAllTap,
+}) {
   if (destinations.isEmpty) {
     return const SizedBox.shrink();
   }
@@ -172,7 +172,7 @@ Widget buildPopularDestinations(
             ),
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: onSeeAllTap,
             child: const Text(
               'See All',
               style: TextStyle(
@@ -675,8 +675,6 @@ Widget buildStatsSection(
         buildStatItem(context, trips.toString(), 'Trips', Icons.flight_takeoff),
         Container(width: 1, height: 40, color: Colors.grey[300]),
         buildStatItem(context, places.toString(), 'Saved', Icons.bookmark),
-        Container(width: 1, height: 40, color: Colors.grey[300]),
-        buildStatItem(context, photos.toString(), 'Photos', Icons.photo_camera),
       ],
     ),
   );

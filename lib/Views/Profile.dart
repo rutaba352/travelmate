@@ -170,8 +170,7 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
       await _authService.logOut();
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'Logged out successfully');
-        Navigator.pushAndRemoveUntil(
-          context,
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,
         );
@@ -342,7 +341,6 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                               context,
                               trips: bookingsCount,
                               places: savedCount,
-                              photos: 12, // Placeholder
                             );
                           },
                         );
@@ -423,35 +421,37 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                             color: Colors.blue,
                           ),
                           title: const Text('Seed Activities (Paris/Lahore)'),
-                          subtitle: const Text('Upload sample activities to Firestore'),
+                          subtitle: const Text(
+                            'Upload sample activities to Firestore',
+                          ),
                           onTap: () async {
-                              try {
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (ctx) => const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                            try {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+
+                              await DataSeeder().seedActivities();
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                SnackbarHelper.showSuccess(
+                                  context,
+                                  'Activities Seeded Successfully!',
                                 );
-
-                                await DataSeeder().seedActivities();
-
-                                if (context.mounted) {
-                                  Navigator.pop(context); 
-                                  SnackbarHelper.showSuccess(
-                                    context,
-                                    'Activities Seeded Successfully!',
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  SnackbarHelper.showError(
-                                    context,
-                                    'Seeding Failed: $e',
-                                  );
-                                }
                               }
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                SnackbarHelper.showError(
+                                  context,
+                                  'Seeding Failed: $e',
+                                );
+                              }
+                            }
                           },
                         ),
                       ],
@@ -492,6 +492,7 @@ class _ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                   TextButton(
                     onPressed: () {
                       MainNavigation.switchTab(
+                        context,
                         2,
                       ); // Switch to My Trips (Need to add My Trips tab or navigate)
                       // Actually My Trips is a separate page usually reachable from "See All"

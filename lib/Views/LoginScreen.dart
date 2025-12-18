@@ -83,10 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
           // Navigate to home
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  MainNavigation(key: MainNavigation.globalKey),
-            ),
+            MaterialPageRoute(builder: (context) => MainNavigation()),
           );
         }
       } on UserNotFoundAuthException {
@@ -148,9 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navigate to home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => MainNavigation(key: MainNavigation.globalKey),
-          ),
+          MaterialPageRoute(builder: (context) => MainNavigation()),
         );
       }
     } on EmailAlreadyInUseAuthException {

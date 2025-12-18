@@ -7,13 +7,10 @@ import 'package:travelmate/Views/Saved.dart';
 class MainNavigation extends StatefulWidget {
   final int initialIndex;
 
-  static final GlobalKey<MainNavigationState> globalKey =
-      GlobalKey<MainNavigationState>();
-
   const MainNavigation({super.key, this.initialIndex = 0});
 
-  static void switchTab(int index) {
-    globalKey.currentState?.updateIndex(index);
+  static void switchTab(BuildContext context, int index) {
+    context.findAncestorStateOfType<MainNavigationState>()?.updateIndex(index);
   }
 
   @override
@@ -39,7 +36,10 @@ class MainNavigationState extends State<MainNavigation> {
 
     switch (index) {
       case 0:
-        _navigatorKey.currentState?.pushNamedAndRemoveUntil('/', (route) => false);
+        _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/',
+          (route) => false,
+        );
         break;
       case 1:
         _navigatorKey.currentState?.pushNamed('/explore');
@@ -95,11 +95,15 @@ class MainNavigationState extends State<MainNavigation> {
             _TabNavigatorObserver(
               onRouteChanged: (routeName) {
                 int newIndex = _selectedIndex;
-                if (routeName == '/') newIndex = 0;
-                else if (routeName == '/explore') newIndex = 1;
-                else if (routeName == '/saved') newIndex = 2;
-                else if (routeName == '/profile') newIndex = 3;
-                
+                if (routeName == '/')
+                  newIndex = 0;
+                else if (routeName == '/explore')
+                  newIndex = 1;
+                else if (routeName == '/saved')
+                  newIndex = 2;
+                else if (routeName == '/profile')
+                  newIndex = 3;
+
                 if (newIndex != _selectedIndex) {
                   setState(() => _selectedIndex = newIndex);
                 }
@@ -116,7 +120,10 @@ class MainNavigationState extends State<MainNavigation> {
           elevation: 8,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore),
+              label: 'Explore',
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Saved'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
@@ -144,7 +151,7 @@ class _TabNavigatorObserver extends NavigatorObserver {
       onRouteChanged(previousRoute.settings.name);
     }
   }
-  
+
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);

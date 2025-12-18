@@ -40,7 +40,6 @@ class _TouristSpotsListState extends State<TouristSpotsList> {
 
   @override
   void initState() {
-    super.initState();
     _searchController = TextEditingController();
     _loadSpots();
   }
@@ -115,9 +114,7 @@ class _TouristSpotsListState extends State<TouristSpotsList> {
   void _viewSpotDetails(Map<String, dynamic> spot) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => SpotDetails(spotData: spot),
-      ),
+      MaterialPageRoute(builder: (context) => SpotDetails(spotData: spot)),
     );
   }
 

@@ -8,6 +8,7 @@ import 'package:travelmate/Views/EditProfile.dart';
 import 'package:travelmate/Views/HelpSupport.dart';
 import 'package:travelmate/Views/PrivacyPolicy.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:travelmate/Views/LoginScreen.dart';
 
 class Settings extends StatefulWidget {
   const Settings({Key? key}) : super(key: key);
@@ -178,12 +179,33 @@ class _SettingsState extends State<Settings> {
                         child: const Text('CANCEL'),
                       ),
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          SnackbarHelper.showSuccess(
-                            context,
-                            'Logged out successfully',
-                          );
+                        onPressed: () async {
+                          Navigator.pop(context); // Close dialog
+                          try {
+                            await AuthService.firebase().logOut();
+                            if (context.mounted) {
+                              SnackbarHelper.showSuccess(
+                                context,
+                                'Logged out successfully',
+                              );
+                              Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              SnackbarHelper.showError(
+                                context,
+                                'Failed to logout',
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00897B),

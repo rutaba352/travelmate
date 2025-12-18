@@ -1,45 +1,36 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:travelmate/Services/API/MockData.dart';
 
+/// Amadeus API Service for TravelMate
+/// Free API for flights, hotels, and activities
+/// Sign up at: https://developers.amadeus.com/register
 class AmadeusApiService {
-  // Replace with your credentials or leave as is to trigger Mock Mode
-  final String _apiKey = 'YOUR_API_KEY_HERE';
-  final String _apiSecret = 'YOUR_API_SECRET_HERE';
-  final String _baseUrl =
-      'https://test.api.amadeus.com/v1'; // v1 or v2 depending on endpoint
+  // ⚠️ IMPORTANT: Replace these with your own credentials from Amadeus
+  // Get them FREE at: https://developers.amadeus.com/register
+  static const String _apiKey = 'Qrqd9Z1dZjOuksAVPg4X6fHHnXZNTp5V';
+  static const String _apiSecret = 'drmPxGHAunKpg1qp';
 
+  static const String _baseUrl = 'https://test.api.amadeus.com';
   String? _accessToken;
   DateTime? _tokenExpiry;
-  bool _useMock = false; // Flag to switch to mock data on error
 
   // Singleton pattern
   static final AmadeusApiService _instance = AmadeusApiService._internal();
   factory AmadeusApiService() => _instance;
   AmadeusApiService._internal();
 
-  /// Authenticate with Amadeus API
+  /// Get access token (expires every 30 minutes)
   Future<String> _getAccessToken() async {
-    // If we're already in mock mode, return valid-looking token
-    if (_useMock) return 'mock_token';
-
+    // Check if token is still valid
     if (_accessToken != null &&
         _tokenExpiry != null &&
         DateTime.now().isBefore(_tokenExpiry!)) {
       return _accessToken!;
     }
 
-    // Check for placeholder credentials
-    if (_apiKey == 'YOUR_API_KEY_HERE' ||
-        _apiSecret == 'YOUR_API_SECRET_HERE') {
-      print('Using Mock Data (Credentials missing)');
-      _useMock = true;
-      return 'mock_token';
-    }
-
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/security/oauth2/token'),
+        Uri.parse('$_baseUrl/v1/security/oauth2/token'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'grant_type': 'client_credentials',
@@ -51,51 +42,43 @@ class AmadeusApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _accessToken = data['access_token'];
-        _tokenExpiry = DateTime.now().add(
-          Duration(seconds: data['expires_in']),
-        );
-        _useMock = false; // Connection successful
+        // Token expires in 30 minutes, set expiry to 25 minutes for safety
+        _tokenExpiry = DateTime.now().add(const Duration(minutes: 25));
         return _accessToken!;
       } else {
-        print('Amadeus Auth Failed: ${response.body}');
-        // Fallback to mock on auth failure
-        _useMock = true;
-        return 'mock_token';
+        throw Exception('Failed to get access token: ${response.body}');
       }
     } catch (e) {
-      print('Amadeus Connection Error: $e');
-      _useMock = true;
-      return 'mock_token';
+      throw Exception('Authentication error: $e');
     }
   }
 
-  // ================= SEARCH METHODS =================
-
   /// Search Flights
+  /// Example: from = 'NYC', to = 'PAR', date = '2024-12-20'
   Future<List<Map<String, dynamic>>> searchFlights({
     required String originCode,
     required String destinationCode,
     required String departureDate,
     int adults = 1,
+    String? returnDate,
   }) async {
     try {
       final token = await _getAccessToken();
 
-      if (_useMock) {
-        await Future.delayed(const Duration(seconds: 1));
-        // Dynamic Mock Generation based on query
-        return _generateMockFlights(originCode, destinationCode, departureDate);
+      final queryParams = {
+        'originLocationCode': originCode,
+        'destinationLocationCode': destinationCode,
+        'departureDate': departureDate,
+        'adults': adults.toString(),
+        'max': '20', // Limit results
+      };
+
+      if (returnDate != null) {
+        queryParams['returnDate'] = returnDate;
       }
 
-      final uri = Uri.parse('$_baseUrl/v2/shopping/flight-offers').replace(
-        queryParameters: {
-          'originLocationCode': originCode,
-          'destinationLocationCode': destinationCode,
-          'departureDate': departureDate,
-          'adults': adults.toString(),
-          'max': '5',
-        },
-      );
+      final uri = Uri.parse('$_baseUrl/v2/shopping/flight-offers')
+          .replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -104,21 +87,43 @@ class AmadeusApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List offers = data['data'] ?? [];
-        return offers.map((offer) => _normalizeFlight(offer)).toList();
+        final List flights = data['data'] ?? [];
+
+        return flights.map((flight) {
+          final itinerary = flight['itineraries'][0];
+          final segment = itinerary['segments'][0];
+
+          return {
+            'id': flight['id'],
+            'airline': segment['carrierCode'],
+            'flightNumber': segment['number'],
+            'departure': {
+              'airport': segment['departure']['iataCode'],
+              'time': segment['departure']['at'],
+            },
+            'arrival': {
+              'airport': segment['arrival']['iataCode'],
+              'time': segment['arrival']['at'],
+            },
+            'duration': itinerary['duration'],
+            'stops': itinerary['segments'].length - 1,
+            'price': {
+              'total': flight['price']['total'],
+              'currency': flight['price']['currency'],
+            },
+            'seats': flight['numberOfBookableSeats'],
+          };
+        }).toList();
       } else {
-        throw Exception('Failed to search flights');
+        throw Exception('Failed to search flights: ${response.body}');
       }
     } catch (e) {
-      if (_useMock)
-        return _generateMockFlights(originCode, destinationCode, departureDate);
-      print('Flight Search Error: $e');
-      _useMock = true; // Switch to mock on error
-      return _generateMockFlights(originCode, destinationCode, departureDate);
+      throw Exception('Flight search error: $e');
     }
   }
 
-  /// Search Hotels
+  /// Search Hotels by City
+  /// Example: cityCode = 'PAR' (Paris), checkIn = '2024-12-20', checkOut = '2024-12-25'
   Future<List<Map<String, dynamic>>> searchHotels({
     required String cityCode,
     required String checkInDate,
@@ -128,66 +133,94 @@ class AmadeusApiService {
     try {
       final token = await _getAccessToken();
 
-      if (_useMock) {
-        await Future.delayed(const Duration(seconds: 1));
-        return _generateMockHotels(cityCode);
-      }
+      // Step 1: Get hotel IDs in the city
+      final hotelsUri = Uri.parse('$_baseUrl/v1/reference-data/locations/hotels/by-city')
+          .replace(queryParameters: {'cityCode': cityCode});
 
-      final uri =
-          Uri.parse(
-            '$_baseUrl/v1/reference-data/locations/hotels/by-city',
-          ).replace(
-            queryParameters: {
-              'cityCode': cityCode,
-              'radius': '10',
-              'radiusUnit': 'KM',
-              // Note: Full hotel pricing requires another endpoint in production (Hotel Search v3),
-              // but for this demo we might use simple list or normalized data
-            },
-          );
-
-      final response = await http.get(
-        uri,
+      final hotelsResponse = await http.get(
+        hotelsUri,
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List hotels = data['data'] ?? [];
-        // For 'by-city' endpoint, we don't get prices. We mock prices for the UI.
-        return hotels.take(5).map((h) => _normalizeHotel(h)).toList();
+      if (hotelsResponse.statusCode != 200) {
+        throw Exception('Failed to get hotels');
+      }
+
+      final hotelsData = json.decode(hotelsResponse.body);
+      final List hotels = hotelsData['data'] ?? [];
+
+      if (hotels.isEmpty) return [];
+
+      // Get first 10 hotel IDs
+      final hotelIds = hotels.take(10).map((h) => h['hotelId']).join(',');
+
+      // Step 2: Get hotel offers with prices
+      final offersUri = Uri.parse('$_baseUrl/v3/shopping/hotel-offers')
+          .replace(queryParameters: {
+        'hotelIds': hotelIds,
+        'checkInDate': checkInDate,
+        'checkOutDate': checkOutDate,
+        'adults': adults.toString(),
+      });
+
+      final offersResponse = await http.get(
+        offersUri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (offersResponse.statusCode == 200) {
+        final offersData = json.decode(offersResponse.body);
+        final List offers = offersData['data'] ?? [];
+
+        return offers.map((offer) {
+          final hotel = offer['hotel'];
+          final bestOffer = offer['offers'][0];
+
+          return {
+            'id': hotel['hotelId'],
+            'name': hotel['name'],
+            'rating': hotel['rating'] ?? 'N/A',
+            'location': {
+              'latitude': hotel['latitude'],
+              'longitude': hotel['longitude'],
+              'cityCode': cityCode,
+            },
+            'price': {
+              'total': bestOffer['price']['total'],
+              'currency': bestOffer['price']['currency'],
+              'perNight': (double.parse(bestOffer['price']['total']) /
+                  _calculateNights(checkInDate, checkOutDate)).toStringAsFixed(2),
+            },
+            'roomType': bestOffer['room']['type'],
+            'amenities': hotel['amenities'] ?? [],
+            'checkIn': checkInDate,
+            'checkOut': checkOutDate,
+          };
+        }).toList();
       } else {
-        throw Exception('Failed to search hotels');
+        throw Exception('Failed to get hotel offers');
       }
     } catch (e) {
-      if (_useMock) return _generateMockHotels(cityCode);
-      // Check if error is 401 or 500, then switch to mock
-      _useMock = true;
-      return _generateMockHotels(cityCode);
+      throw Exception('Hotel search error: $e');
     }
   }
 
-  /// Search Activities
+  /// Search Points of Interest (Tourist Attractions)
+  /// Example: latitude = 48.8566, longitude = 2.3522 (Paris)
   Future<List<Map<String, dynamic>>> searchActivities({
     required double latitude,
     required double longitude,
-    int radius = 5,
+    int radius = 5, // km
   }) async {
     try {
       final token = await _getAccessToken();
 
-      if (_useMock) {
-        await Future.delayed(const Duration(seconds: 1));
-        return _generateMockActivities(latitude, longitude);
-      }
-
-      final uri = Uri.parse('$_baseUrl/v1/shopping/activities').replace(
-        queryParameters: {
-          'latitude': latitude.toString(),
-          'longitude': longitude.toString(),
-          'radius': radius.toString(),
-        },
-      );
+      final uri = Uri.parse('$_baseUrl/v1/shopping/activities')
+          .replace(queryParameters: {
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'radius': radius.toString(),
+      });
 
       final response = await http.get(
         uri,
@@ -197,28 +230,44 @@ class AmadeusApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List activities = data['data'] ?? [];
-        return activities.map((a) => _normalizeActivity(a)).toList();
+
+        return activities.map((activity) {
+          return {
+            'id': activity['id'],
+            'name': activity['name'],
+            'description': activity['shortDescription'] ?? 'No description available',
+            'category': activity['type'] ?? 'General',
+            'location': {
+              'latitude': activity['geoCode']['latitude'],
+              'longitude': activity['geoCode']['longitude'],
+            },
+            'price': {
+              'amount': activity['price']['amount'],
+              'currency': activity['price']['currencyCode'],
+            },
+            'rating': activity['rating'] ?? 'N/A',
+            'images': activity['pictures'] ?? [],
+          };
+        }).toList();
       } else {
         throw Exception('Failed to search activities');
       }
     } catch (e) {
-      _useMock = true;
-      return _generateMockActivities(latitude, longitude);
+      throw Exception('Activities search error: $e');
     }
   }
 
-  /// Search Locations (Cities/Airports)
+  /// Get City/Airport code from name
+  /// Example: 'Paris' -> 'PAR', 'New York' -> 'NYC'
   Future<List<Map<String, dynamic>>> searchLocations(String keyword) async {
     try {
       final token = await _getAccessToken();
 
-      if (_useMock) {
-        return _searchMockLocations(keyword);
-      }
-
-      final uri = Uri.parse('$_baseUrl/v1/reference-data/locations').replace(
-        queryParameters: {'keyword': keyword, 'subType': 'CITY,AIRPORT'},
-      );
+      final uri = Uri.parse('$_baseUrl/v1/reference-data/locations')
+          .replace(queryParameters: {
+        'keyword': keyword,
+        'subType': 'CITY,AIRPORT',
+      });
 
       final response = await http.get(
         uri,
@@ -228,268 +277,56 @@ class AmadeusApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List locations = data['data'] ?? [];
-        return locations.map((l) => _normalizeLocation(l)).toList();
+
+        return locations.map((location) {
+          return {
+            'code': location['iataCode'],
+            'name': location['name'],
+            'city': location['address']['cityName'],
+            'country': location['address']['countryName'],
+            'type': location['subType'], // CITY or AIRPORT
+          };
+        }).toList();
       } else {
         throw Exception('Failed to search locations');
       }
     } catch (e) {
-      _useMock = true;
-      return _searchMockLocations(keyword);
+      throw Exception('Location search error: $e');
     }
   }
 
-  // ================= NORMALIZERS =================
-
-  Map<String, dynamic> _normalizeFlight(Map<String, dynamic> flight) {
-    // Extract relevant data from complex Amadeus response
-    // Heavily simplified
-    final itinerary = flight['itineraries'][0];
-    final segment = itinerary['segments'][0];
-    return {
-      'id': flight['id'],
-      'airline': segment['carrierCode'],
-      'flightNumber': segment['number'],
-      'departure': {
-        'airport': segment['departure']['iataCode'],
-        'time': segment['departure']['at'],
-      },
-      'arrival': {
-        'airport': segment['arrival']['iataCode'],
-        'time': segment['arrival']['at'],
-      },
-      'duration': itinerary['duration'],
-      'price': {
-        'total': flight['price']['total'],
-        'currency': flight['price']['currency'],
-      },
-    };
+  /// Helper: Calculate nights between dates
+  int _calculateNights(String checkIn, String checkOut) {
+    final checkInDate = DateTime.parse(checkIn);
+    final checkOutDate = DateTime.parse(checkOut);
+    return checkOutDate.difference(checkInDate).inDays;
   }
 
-  Map<String, dynamic> _normalizeHotel(Map<String, dynamic> hotel) {
-    return {
-      'hotelId': hotel['hotelId'] ?? 'unknown',
-      'name': hotel['name'] ?? 'Unknown Hotel',
-      'rating': hotel['rating'] ?? '4.0',
-      'location': hotel['address'] ?? {},
-      'price': {'total': '150.00', 'currency': 'USD'}, // Simulated price
-      'amenities': ['WIFI', 'POOL'], // Simulated
-    };
-  }
-
-  Map<String, dynamic> _normalizeActivity(Map<String, dynamic> activity) {
-    return {
-      'id': activity['id'],
-      'name': activity['name'],
-      'description': activity['shortDescription'] ?? 'No description',
-      'category': activity['type'] ?? 'General',
-      'location': activity['geoCode'],
-      'price': {
-        'amount': activity['price']?['amount'] ?? '50.00',
-        'currency': activity['price']?['currencyCode'] ?? 'USD',
-      },
-      'rating': activity['rating'] ?? '4.5',
-      'images': activity['pictures'] ?? [],
-    };
-  }
-
-  Map<String, dynamic> _normalizeLocation(Map<String, dynamic> loc) {
-    return {
-      'code': loc['iataCode'],
-      'name': loc['name'],
-      'city': loc['address']['cityName'],
-      'country': loc['address']['countryName'],
-      'type': loc['subType'],
-      'geoCode': loc['geoCode'], // Includes latitude/longitude if available
-    };
-  }
-
-  // ================= DYNAMIC MOCK GENERATORS =================
-
-  List<Map<String, dynamic>> _generateMockFlights(
-    String origin,
-    String dest,
-    String date,
-  ) {
-    return [
-      {
-        'id': 'mock-1',
-        'airline': 'MockAir',
-        'flightNumber': '101',
-        'departure': {'airport': origin, 'time': '${date}T10:00:00'},
-        'arrival': {'airport': dest, 'time': '${date}T14:30:00'},
-        'duration': 'PT4H30M',
-        'price': {'total': '350.00', 'currency': 'USD'},
-        'stops': 0,
-      },
-      {
-        'id': 'mock-2',
-        'airline': 'AirDemo',
-        'flightNumber': '220',
-        'departure': {'airport': origin, 'time': '${date}T16:00:00'},
-        'arrival': {'airport': dest, 'time': '${date}T20:45:00'},
-        'duration': 'PT4H45M',
-        'price': {'total': '320.00', 'currency': 'USD'},
-        'stops': 1,
-      },
-      {
-        'id': 'mock-3',
-        'airline': 'JetStream',
-        'flightNumber': '888',
-        'departure': {'airport': origin, 'time': '${date}T08:00:00'},
-        'arrival': {'airport': dest, 'time': '${date}T12:00:00'},
-        'duration': 'PT4H00M',
-        'price': {'total': '450.00', 'currency': 'USD'},
-        'stops': 0,
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _generateMockHotels(String cityCode) {
-    return [
-      {
-        'hotelId': 'h1',
-        'name': 'Grand Hotel $cityCode',
-        'rating': '4.5',
-        'price': {'total': '150.00', 'currency': 'USD'},
-        'offers': [
-          {
-            'price': {'total': '150.00', 'currency': 'USD'},
-            'room': {'type': 'Deluxe'},
-          },
-        ],
-      },
-      {
-        'hotelId': 'h2',
-        'name': '$cityCode City Resort',
-        'rating': '4.8',
-        'price': {'total': '220.00', 'currency': 'USD'},
-        'offers': [
-          {
-            'price': {'total': '220.00', 'currency': 'USD'},
-            'room': {'type': 'Suite'},
-          },
-        ],
-      },
-      {
-        'hotelId': 'h3',
-        'name': 'Budget Inn $cityCode',
-        'rating': '3.9',
-        'price': {'total': '80.00', 'currency': 'USD'},
-        'offers': [
-          {
-            'price': {'total': '80.00', 'currency': 'USD'},
-            'room': {'type': 'Standard'},
-          },
-        ],
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _generateMockActivities(double lat, double lng) {
-    return [
-      {
-        'id': 'a1',
-        'name': 'City Tour',
-        'description': 'Guided tour of the city highlights.',
-        'type': 'TOUR',
-        'price': {'amount': '40.00', 'currencyCode': 'USD'},
-        'rating': '4.7',
-        'geoCode': {'latitude': lat, 'longitude': lng},
-        'pictures': ['https://example.com/tour.jpg'],
-      },
-      {
-        'id': 'a2',
-        'name': 'Museum Visit',
-        'description': 'Entry to the national museum.',
-        'type': 'CULTURE',
-        'price': {'amount': '25.00', 'currencyCode': 'USD'},
-        'rating': '4.5',
-        'geoCode': {'latitude': lat, 'longitude': lng},
-        'pictures': ['https://example.com/museum.jpg'],
-      },
-      {
-        'id': 'a3',
-        'name': 'Food Tasting',
-        'description': 'Taste local delicacies.',
-        'type': 'FOOD',
-        'price': {'amount': '60.00', 'currencyCode': 'USD'},
-        'rating': '4.9',
-        'geoCode': {'latitude': lat, 'longitude': lng},
-        'pictures': ['https://example.com/food.jpg'],
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _searchMockLocations(String keyword) {
-    // Find in static mock data first
-    final staticMatches = MockData.locations
-        .where(
-          (l) =>
-              l['name'].toString().toLowerCase().contains(
-                keyword.toLowerCase(),
-              ) ||
-              l['iataCode'].toString().toLowerCase().contains(
-                keyword.toLowerCase(),
-              ) ||
-              l['address']['cityName'].toString().toLowerCase().contains(
-                (keyword.toLowerCase()),
-              ),
-        )
-        .toList();
-
-    if (staticMatches.isNotEmpty) {
-      return staticMatches
-          .map(
-            (l) => {
-              'code': l['iataCode'],
-              'name': l['name'],
-              'city': l['address']['cityName'],
-              'country': l['address']['countryName'],
-              'type': l['subType'],
-              // Add default coords if missing in static data
-              'geoCode':
-                  l['geoCode'] ?? {'latitude': 48.8566, 'longitude': 2.3522},
-            },
-          )
-          .toList();
-    }
-
-    // If no static match, generate a dynamic one to ensure flow works
-    return [
-      {
-        'code': keyword.substring(0, 3).toUpperCase(),
-        'name': keyword,
-        'city': keyword,
-        'country': 'Mock Country',
-        'type': 'CITY',
-        'geoCode': {'latitude': 48.8566, 'longitude': 2.3522},
-      },
-    ];
-  }
-
-  // Helper for Packages (Keep existing logic)
+  /// Create Package (Flight + Hotel combination)
   Future<Map<String, dynamic>> createPackage({
     required Map<String, dynamic> flight,
     required Map<String, dynamic> hotel,
   }) async {
-    final flightPrice =
-        double.tryParse(flight['price']['total'].toString()) ?? 0.0;
-    final hotelPrice =
-        double.tryParse(hotel['price']['total'].toString()) ?? 0.0;
-    final total = flightPrice + hotelPrice;
-    final savings = total * 0.15;
+    final flightPrice = double.parse(flight['price']['total']);
+    final hotelPrice = double.parse(hotel['price']['total']);
+    final totalPrice = flightPrice + hotelPrice;
+    final savings = totalPrice * 0.15; // 15% package discount
+
     return {
-      'id': 'PKG-${flight['id']}',
+      'id': 'PKG-${flight['id']}-${hotel['id']}',
       'type': 'Package',
       'flight': flight,
       'hotel': hotel,
       'price': {
-        'total': total,
+        'flight': flightPrice,
+        'hotel': hotelPrice,
+        'total': totalPrice,
         'discount': savings,
-        'finalPrice': total - savings,
-        'currency': 'USD',
+        'finalPrice': totalPrice - savings,
+        'currency': flight['price']['currency'],
       },
-      'savings': '15%',
+      'duration': '${_calculateNights(hotel['checkIn'], hotel['checkOut'])} Days',
+      'savings': '${((savings / totalPrice) * 100).toStringAsFixed(0)}%',
     };
   }
 }

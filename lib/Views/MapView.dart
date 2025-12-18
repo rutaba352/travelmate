@@ -13,13 +13,13 @@ import '../Services/location/hotel_service.dart'; // Add this package
 class MapView extends StatefulWidget {
   final String tripTitle;
   final LatLng? initialLocation;
-  final Hotel? selectedHotel; // Make sure this exists
+  final Map<String, dynamic>? hotelMap; // Make sure this exists
 
   const MapView({
     super.key,
     required this.tripTitle,
     this.initialLocation,
-    this.selectedHotel, // Make sure this exists
+    this.hotelMap, // Make sure this exists
   });
 
   @override
@@ -31,26 +31,61 @@ class _MapViewState extends State<MapView> {
   List<Map<String, dynamic>> _markers = [];
   List<LatLng> _routePoints = [];
   LatLng? _selectedLocation;
-  MapController _mapController = MapController();
+  final MapController _mapController = MapController();
   bool _isLoading = false;
   List<Hotel> _nearbyHotels = [];
   List<Map<String, dynamic>> _nearbyPlaces = [];
+
+  late final Hotel selectedHotel = widget.hotelMap != null
+      ? Hotel(
+    id: widget.hotelMap!['id'] as String,
+    name: widget.hotelMap!['name'] as String,
+    description: widget.hotelMap!['description'] as String,
+    location: widget.hotelMap!['location'] as String,
+    lat: (widget.hotelMap!['lat'] as num).toDouble(),
+    lng: (widget.hotelMap!['lng'] as num).toDouble(),
+    imagePath: widget.hotelMap!['image'] as String,
+    rating: (widget.hotelMap!['rating'] as num).toDouble(),
+    price: double.parse(
+      widget.hotelMap!['price']
+          .toString()
+          .replaceAll(RegExp(r'[^0-9.]'), ''),
+    ),
+    amenities:
+    List<String>.from(widget.hotelMap!['amenities'] ?? []),
+  )
+      : Hotel(
+    // 🔒 HARD-CODED FALLBACK VALUES
+    id: '3',
+    name: 'Serena Swat',
+    location: 'Swat Valley, Pakistan',
+    rating: 4.7,
+    price: 20000,
+    amenities: ['River View', 'Spa', 'Free WiFi', 'Parking'],
+    imagePath: 'assets/images/hotels/serena_swat.jpeg',
+    description:
+    'Luxury hotel in the heart of Swat Valley with modern amenities.',
+    lat: 34.7500,
+    lng: 72.3572,
+  );
+
+
 
   @override
   void initState() {
     super.initState();
 
     // Fix: Use selected hotel's location or initial location
-    if (widget.selectedHotel != null) {
-      _selectedLocation = widget.selectedHotel!.toLatLng();
+    if (selectedHotel != null) {
+      _selectedLocation = selectedHotel!.toLatLng();
       // Clear all markers and add only the selected hotel
       _markers = [
         {
-          'lat': widget.selectedHotel!.lat,
-          'lng': widget.selectedHotel!.lng,
+          'lat': selectedHotel.lat,
+          'lng': selectedHotel.lng,
           'label': '★',
           'color': 'red',
-          'name': widget.selectedHotel!.name,
+          'name': selectedHotel.name,
         },
       ];
     } else if (widget.initialLocation != null) {
@@ -115,7 +150,7 @@ class _MapViewState extends State<MapView> {
 
     try {
       // Only load data if not coming from hotel selection
-      if (widget.selectedHotel == null) {
+      if (selectedHotel == null) {
         await _loadMapData();
       }
 
@@ -137,7 +172,7 @@ class _MapViewState extends State<MapView> {
       final data = json.decode(response);
 
       // Only load markers if no hotel is selected
-      if (widget.selectedHotel == null) {
+      if (selectedHotel == null) {
         setState(() {
           _markers = List<Map<String, dynamic>>.from(data['markers']);
         });
@@ -225,8 +260,9 @@ class _MapViewState extends State<MapView> {
     // Filter hotels near current location (within 50km radius)
     final nearbyHotels = allHotels.where((hotel) {
       // Exclude selected if any
-      if (widget.selectedHotel != null && hotel.id == widget.selectedHotel!.id)
+      if (hotel.id == selectedHotel.id) {
         return false;
+      }
 
       final distance = _calculateDistance(
         _selectedLocation!.latitude,
@@ -346,8 +382,8 @@ class _MapViewState extends State<MapView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Map - Paris Vacation',
+        title: Text(
+          selectedHotel.name,
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.teal.shade600,

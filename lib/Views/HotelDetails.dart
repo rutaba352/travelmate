@@ -4,9 +4,9 @@ import 'package:travelmate/Views/MapView.dart';
 import 'package:travelmate/Services/BookingService.dart';
 
 class HotelDetails extends StatefulWidget {
-  final Map<String, dynamic>? hotelData;
+  final Map<String, dynamic> hotelData;
 
-  const HotelDetails({Key? key, this.hotelData}) : super(key: key);
+  const HotelDetails({Key? key,  required this.hotelData}) : super(key: key);
 
   @override
   State<HotelDetails> createState() => _HotelDetailsState();
@@ -122,7 +122,7 @@ class _HotelDetailsState extends State<HotelDetails>
       context,
       MaterialPageRoute(
         builder: (context) =>
-            MapView(tripTitle: widget.hotelData?['name'] ?? 'Hotel Location'),
+            MapView(tripTitle: widget.hotelData?['name'] ?? 'Hotel Location', hotelMap: widget.hotelData),
       ),
     );
   }

@@ -6,7 +6,7 @@ import 'package:travelmate/Services/BookingService.dart';
 class HotelDetails extends StatefulWidget {
   final Map<String, dynamic> hotelData;
 
-  const HotelDetails({Key? key,  required this.hotelData}) : super(key: key);
+  const HotelDetails({Key? key, required this.hotelData}) : super(key: key);
 
   @override
   State<HotelDetails> createState() => _HotelDetailsState();
@@ -121,8 +121,10 @@ class _HotelDetailsState extends State<HotelDetails>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            MapView(tripTitle: widget.hotelData?['name'] ?? 'Hotel Location', hotelMap: widget.hotelData),
+        builder: (context) => MapView(
+          tripTitle: widget.hotelData?['name'] ?? 'Hotel Location',
+          hotelMap: widget.hotelData,
+        ),
       ),
     );
   }
@@ -228,7 +230,8 @@ class _HotelDetailsState extends State<HotelDetails>
                           "${_checkInDate!.day} ${_getMonthName(_checkInDate!.month)} ${_checkInDate!.year}";
                       bookingData['checkOut'] =
                           "${_checkOutDate!.day} ${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.year}";
-                      bookingData['startDate'] = bookingData['checkIn']; // Match MyTrips
+                      bookingData['startDate'] =
+                          bookingData['checkIn']; // Match MyTrips
                       bookingData['guests'] = _numberOfGuests;
                       bookingData['rooms'] = _numberOfRooms;
                       bookingData['totalPrice'] = 450;
@@ -255,6 +258,7 @@ class _HotelDetailsState extends State<HotelDetails>
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00897B),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -637,6 +641,7 @@ class _HotelDetailsState extends State<HotelDetails>
                 label: const Text('Book Now'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00897B),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1008,6 +1013,7 @@ class _HotelDetailsState extends State<HotelDetails>
       },
     );
   }
+
   String _getMonthName(int month) {
     const months = [
       'Jan',
@@ -1021,7 +1027,7 @@ class _HotelDetailsState extends State<HotelDetails>
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return months[month - 1];
   }

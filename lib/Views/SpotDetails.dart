@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Views/MapView.dart';
 import 'package:travelmate/Services/BookingService.dart';
+import 'package:travelmate/Services/SavedItemsService.dart'; // Added for toggle functionality
 
 class SpotDetails extends StatefulWidget {
   final Map<String, dynamic>? spotData;
@@ -16,9 +17,9 @@ class _SpotDetailsState extends State<SpotDetails>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isSaved = false;
-  int _selectedImageIndex = 0;
 
-  final List<String> images = ['🗼', '📸', '🌅', '🌃', '🎨'];
+  // Uses placeholders if specific images list isn't provided (likely not in main data)
+  final List<String> images = ['📸', '🌅', '🌃', '🎨', '🗼'];
 
   final List<Map<String, dynamic>> reviews = [
     {
@@ -26,45 +27,29 @@ class _SpotDetailsState extends State<SpotDetails>
       'avatar': '👩',
       'rating': 5.0,
       'date': 'Oct 10, 2024',
-      'comment':
-          'Absolutely stunning! A must-visit when in Paris. The view from the top is breathtaking.',
+      'comment': 'Absolutely stunning! A must-visit. The view is breathtaking.',
     },
     {
       'name': 'Michael Chen',
       'avatar': '👨',
       'rating': 4.5,
       'date': 'Oct 5, 2024',
-      'comment':
-          'Great experience but quite crowded. Book tickets in advance to skip the long queues.',
-    },
-    {
-      'name': 'Emma Williams',
-      'avatar': '👧',
-      'rating': 5.0,
-      'date': 'Sep 28, 2024',
-      'comment':
-          'Magical at night! The light show is spectacular. Highly recommend visiting after sunset.',
+      'comment': 'Great experience. Book tickets in advance to skip lines.',
     },
   ];
 
   final List<Map<String, dynamic>> nearbySpots = [
     {
-      'name': 'Louvre Museum',
-      'distance': '3.2 km',
+      'name': 'Nearby Attraction 1',
+      'distance': '1.2 km',
       'image': '🎨',
-      'rating': '4.9',
+      'rating': '4.5',
     },
     {
-      'name': 'Seine River',
+      'name': 'Nearby Attraction 2',
       'distance': '0.5 km',
-      'image': '🚢',
-      'rating': '4.8',
-    },
-    {
-      'name': 'Arc de Triomphe',
-      'distance': '2.8 km',
-      'image': '🏛️',
-      'rating': '4.6',
+      'image': '☕',
+      'rating': '4.2',
     },
   ];
 
@@ -81,14 +66,27 @@ class _SpotDetailsState extends State<SpotDetails>
     super.dispose();
   }
 
-  void _toggleSave() {
+  void _toggleSave() async {
+    // Optimistic UI update
     setState(() {
       _isSaved = !_isSaved;
     });
-    SnackbarHelper.showSuccess(
-      context,
-      _isSaved ? 'Saved to favorites!' : 'Removed from favorites',
-    );
+
+    if (widget.spotData == null) return;
+
+    if (_isSaved) {
+      await SavedItemsService().saveActivity(widget.spotData!);
+      if (mounted) SnackbarHelper.showSuccess(context, 'Saved to favorites!');
+    } else {
+      // If we have an ID, we can remove it. But itemID structure might vary.
+      // For now, simple toggle logic. Proper unsave needs ItemID which might not be passed purely perfectly here if coming effectively from Explore without being saved first.
+      // However, for "Unsaving" from Saved screen, we assume it's handling itself. This is mostly for visual toggle.
+      if (widget.spotData?['itemId'] != null) {
+        await SavedItemsService().removeItem(widget.spotData!['itemId']);
+        if (mounted)
+          SnackbarHelper.showSuccess(context, 'Removed from favorites');
+      }
+    }
   }
 
   Future<void> _bookTicket() async {
@@ -123,8 +121,10 @@ class _SpotDetailsState extends State<SpotDetails>
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text('Select Date',
-                        style: TextStyle(color: Colors.grey)),
+                    const Text(
+                      'Select Date',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                     const SizedBox(height: 8),
                     InkWell(
                       onTap: () async {
@@ -132,12 +132,15 @@ class _SpotDetailsState extends State<SpotDetails>
                           context: context,
                           initialDate: selectedDate!,
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
                                 colorScheme: const ColorScheme.light(
-                                    primary: Color(0xFF00897B)),
+                                  primary: Color(0xFF00897B),
+                                ),
                               ),
                               child: child!,
                             );
@@ -159,10 +162,14 @@ class _SpotDetailsState extends State<SpotDetails>
                             Text(
                               "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
-                            const Icon(Icons.calendar_today,
-                                color: Color(0xFF00897B)),
+                            const Icon(
+                              Icons.calendar_today,
+                              color: Color(0xFF00897B),
+                            ),
                           ],
                         ),
                       ),
@@ -171,8 +178,10 @@ class _SpotDetailsState extends State<SpotDetails>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Tickets',
-                            style: TextStyle(fontSize: 16, color: Colors.grey)),
+                        const Text(
+                          'Tickets',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
                         Row(
                           children: [
                             IconButton(
@@ -187,7 +196,9 @@ class _SpotDetailsState extends State<SpotDetails>
                             Text(
                               '$tickets',
                               style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline),
@@ -207,36 +218,52 @@ class _SpotDetailsState extends State<SpotDetails>
                         onPressed: () async {
                           Navigator.pop(context);
                           final bookingData = Map<String, dynamic>.from(
-                              widget.spotData ?? {});
-                          
+                            widget.spotData ?? {},
+                          );
+
                           // Normalize data for MyTrips
                           bookingData['startDate'] =
                               "${selectedDate!.day} ${_getMonthName(selectedDate!.month)} ${selectedDate!.year}";
                           bookingData['tickets'] = tickets;
                           bookingData['category'] = 'Activities'; // Important
                           bookingData['status'] = 'Upcoming';
-                          
+
                           // Ensure title logic matches Service
-                          if (bookingData['name'] == null && bookingData['title'] == null) {
-                             bookingData['name'] = 'Unknown Tour';
+                          if (bookingData['name'] == null &&
+                              bookingData['title'] != null) {
+                            bookingData['name'] = bookingData['title'];
+                          } else if (bookingData['name'] == null) {
+                            bookingData['name'] = 'Unknown Activity';
                           }
 
                           // Use BookingService
                           try {
-                             final success = await BookingService().createBooking(bookingData);
-                             if (success) {
-                               SnackbarHelper.showSuccess(context, 'Tour booked successfully!');
-                             } else {
-                               SnackbarHelper.showError(context, 'Failed to book tour.');
-                             }
+                            final success = await BookingService()
+                                .createBooking(bookingData);
+                            if (success) {
+                              if (context.mounted)
+                                SnackbarHelper.showSuccess(
+                                  context,
+                                  'Activity booked successfully!',
+                                );
+                            } else {
+                              if (context.mounted)
+                                SnackbarHelper.showError(
+                                  context,
+                                  'Failed to book activity.',
+                                );
+                            }
                           } catch (e) {
-                              // Service might not be imported yet, assume success for UI or needs import
-                              // But we need to add import. 
-                              SnackbarHelper.showError(context, 'Service Error: $e');
+                            if (context.mounted)
+                              SnackbarHelper.showError(
+                                context,
+                                'Service Error: $e',
+                              );
                           }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00897B),
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -245,7 +272,10 @@ class _SpotDetailsState extends State<SpotDetails>
                         child: const Text(
                           'Confirm Booking',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -261,29 +291,50 @@ class _SpotDetailsState extends State<SpotDetails>
 
   String _getMonthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[month - 1];
   }
 
   void _shareSpot() {
-    SnackbarHelper.showInfo(context, 'Sharing Eiffel Tower...');
+    SnackbarHelper.showInfo(
+      context,
+      'Sharing ${widget.spotData?['name'] ?? 'Spot'}...',
+    );
   }
 
   void _getDirections() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => MapView(
-        tripTitle: widget.spotData?['name'] ?? 'Location',
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            MapView(tripTitle: widget.spotData?['name'] ?? 'Location'),
       ),
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final title =
+        widget.spotData?['name'] ?? widget.spotData?['title'] ?? 'Details';
+    final location = widget.spotData?['location'] ?? 'Unknown Location';
+    final rating = widget.spotData?['rating'] ?? '4.5';
+    final price = widget.spotData?['price'] ?? 'Price N/A';
+    final description =
+        widget.spotData?['description'] ?? 'Discover amazing experiences here.';
+    final image = widget.spotData?['image'];
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -342,56 +393,9 @@ class _SpotDetailsState extends State<SpotDetails>
                         ],
                       ),
                     ),
-                    child: Center(
-                      child: Text(
-                        images[_selectedImageIndex],
-                        style: const TextStyle(fontSize: 100),
-                      ),
-                    ),
+                    child: _buildHeaderImage(image),
                   ),
-                  Positioned(
-                    bottom: 20,
-                    left: 0,
-                    right: 0,
-                    child: SizedBox(
-                      height: 60,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: images.length,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedImageIndex = index;
-                              });
-                            },
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _selectedImageIndex == index
-                                      ? const Color(0xFF00897B)
-                                      : Colors.transparent,
-                                  width: 3,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  images[index],
-                                  style: const TextStyle(fontSize: 30),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+                  // Removed the horizontal list of emojis for now to simplify and ensure dynamic data focus
                 ],
               ),
             ),
@@ -405,10 +409,10 @@ class _SpotDetailsState extends State<SpotDetails>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Eiffel Tower',
-                          style: TextStyle(
+                          title,
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF263238),
@@ -425,12 +429,16 @@ class _SpotDetailsState extends State<SpotDetails>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(Icons.star, size: 20, color: Colors.amber),
-                            SizedBox(width: 4),
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              size: 20,
+                              color: Colors.amber,
+                            ),
+                            const SizedBox(width: 4),
                             Text(
-                              '4.8',
-                              style: TextStyle(
+                              rating.toString(),
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -443,13 +451,21 @@ class _SpotDetailsState extends State<SpotDetails>
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
+                      Icon(
+                        Icons.location_on,
+                        size: 18,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 4),
-                      Text(
-                        'Champ de Mars, Paris, France',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey[600],
+                      Expanded(
+                        child: Text(
+                          location,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -460,8 +476,8 @@ class _SpotDetailsState extends State<SpotDetails>
                       Expanded(
                         child: _buildInfoCard(
                           Icons.access_time,
-                          'Opening Hours',
-                          '9:00 AM - 11:00 PM',
+                          'Duration',
+                          widget.spotData?['duration'] ?? 'Flexible',
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -469,7 +485,9 @@ class _SpotDetailsState extends State<SpotDetails>
                         child: _buildInfoCard(
                           Icons.attach_money,
                           'Entry Fee',
-                          '\$25',
+                          price.toString().startsWith('PKR')
+                              ? price
+                              : 'PKR $price',
                         ),
                       ),
                     ],
@@ -481,15 +499,14 @@ class _SpotDetailsState extends State<SpotDetails>
                         child: _buildInfoCard(
                           Icons.directions_walk,
                           'Distance',
-                          '2.5 km',
+                          '2.5 km', // Placeholder
                         ),
                       ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: _buildInfoCard(
                           Icons.people,
                           'Reviews',
-                          '12.5K',
+                          widget.spotData?['reviews']?.toString() ?? '100+',
                         ),
                       ),
                     ],
@@ -516,7 +533,7 @@ class _SpotDetailsState extends State<SpotDetails>
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        _buildAboutTab(),
+                        _buildAboutTab(description),
                         _buildReviewsTab(),
                         _buildNearbyTab(),
                       ],
@@ -566,6 +583,7 @@ class _SpotDetailsState extends State<SpotDetails>
                 label: const Text('Book Ticket'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00897B),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -576,6 +594,31 @@ class _SpotDetailsState extends State<SpotDetails>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeaderImage(dynamic imageSource) {
+    if (imageSource != null && imageSource.toString().startsWith('http')) {
+      return Image.network(
+        imageSource,
+        fit: BoxFit.cover,
+        errorBuilder: (ctx, err, stack) => const Center(
+          child: Icon(Icons.broken_image, size: 50, color: Colors.white),
+        ),
+      );
+    }
+    if (imageSource != null && imageSource.toString().startsWith('assets/')) {
+      return Image.asset(
+        imageSource,
+        fit: BoxFit.cover,
+        errorBuilder: (ctx, err, stack) => const Center(
+          child: Icon(Icons.image, size: 50, color: Colors.white),
+        ),
+      );
+    }
+    // Emoji fallback or text
+    return Center(
+      child: Text(imageSource ?? '📸', style: const TextStyle(fontSize: 100)),
     );
   }
 
@@ -591,13 +634,7 @@ class _SpotDetailsState extends State<SpotDetails>
         children: [
           Icon(icon, color: const Color(0xFF00897B), size: 24),
           const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 4),
           Text(
             value,
@@ -606,13 +643,15 @@ class _SpotDetailsState extends State<SpotDetails>
               fontWeight: FontWeight.bold,
               color: Color(0xFF263238),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAboutTab() {
+  Widget _buildAboutTab(String description) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,7 +666,7 @@ class _SpotDetailsState extends State<SpotDetails>
           ),
           const SizedBox(height: 12),
           Text(
-            'The Eiffel Tower is a wrought-iron lattice tower on the Champ de Mars in Paris, France. It is named after the engineer Gustave Eiffel, whose company designed and built the tower.\n\nConstructed from 1887 to 1889, it was initially criticized by some of France\'s leading artists and intellectuals for its design, but it has become a global cultural icon of France and one of the most recognizable structures in the world.',
+            description,
             style: TextStyle(
               fontSize: 15,
               color: Colors.grey[700],
@@ -644,11 +683,9 @@ class _SpotDetailsState extends State<SpotDetails>
             ),
           ),
           const SizedBox(height: 12),
-          _buildHighlightItem('🌟', 'Spectacular panoramic views of Paris'),
-          _buildHighlightItem('🎆', 'Evening light show every hour'),
-          _buildHighlightItem('🍽️', 'Fine dining restaurants on upper levels'),
+          _buildHighlightItem('🌟', 'Spectacular views'),
           _buildHighlightItem('📸', 'Perfect photo opportunities'),
-          _buildHighlightItem('🏛️', 'Historical monument and engineering marvel'),
+          _buildHighlightItem('🏛️', 'Historical significance'),
         ],
       ),
     );
@@ -665,10 +702,7 @@ class _SpotDetailsState extends State<SpotDetails>
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
           ),
         ],
@@ -797,35 +831,38 @@ class _SpotDetailsState extends State<SpotDetails>
             ),
             title: Text(
               spot['name'],
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            subtitle: Text(spot['distance']),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.star, size: 14, color: Colors.amber),
+                  const SizedBox(width: 4),
+                  Text(
+                    spot['rating'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
-            subtitle: Row(
-              children: [
-                Icon(Icons.directions_walk, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(spot['distance']),
-                const SizedBox(width: 12),
-                const Icon(Icons.star, size: 14, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text(spot['rating']),
-              ],
-            ),
-            trailing: const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Color(0xFF00897B),
-            ),
             onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => SpotDetails(spotData: spot),
-    ),
-  );
-},
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SpotDetails(spotData: spot),
+                ),
+              );
+            },
           ),
         );
       },

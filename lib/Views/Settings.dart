@@ -630,6 +630,7 @@ class _SettingsState extends State<Settings> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00897B),
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('SUBMIT'),
               ),

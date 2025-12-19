@@ -4,6 +4,10 @@ import 'package:travelmate/Utilities/SnackbarHelper.dart';
 import 'package:travelmate/Utilities/EmptyState.dart';
 import 'package:travelmate/Views/MainNavigation.dart';
 
+import 'package:travelmate/Views/HotelDetails.dart';
+import 'package:travelmate/Views/SpotDetails.dart';
+import 'package:travelmate/Views/Activities.dart';
+
 class Saved extends StatefulWidget {
   const Saved({Key? key}) : super(key: key);
 
@@ -293,35 +297,49 @@ class _SavedState extends State<Saved> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (item['rating'] != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.amber[100],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.orange,
+                        // Explicit Actions
+                        Row(
+                          children: [
+                            if (item['rating'] != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  item['rating'].toString(),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange[800],
-                                  ),
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber[100],
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
-                              ],
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.star,
+                                      size: 12,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      item['rating'].toString(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange[800],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            InkWell(
+                              onTap: () => _confirmDelete(item),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: Colors.red[400],
+                                size: 20,
+                              ),
                             ),
-                          ),
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -362,6 +380,34 @@ class _SavedState extends State<Saved> {
     );
   }
 
+  Future<void> _confirmDelete(Map<String, dynamic> item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unsave Item'),
+        content: Text('Remove "${item['title']}" from saved?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _savedItemsService.removeItem(item['itemId']);
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'Item unsaved');
+      }
+    }
+  }
+
   ImageProvider _getItemImage(Map<String, dynamic> item) {
     if (item['image'] != null && item['image'].toString().startsWith('http')) {
       return NetworkImage(item['image']);
@@ -392,6 +438,60 @@ class _SavedState extends State<Saved> {
   }
 
   void _viewItemDetails(Map<String, dynamic> item) {
-    SnackbarHelper.showInfo(context, 'Viewing ${item['title']}');
+    final category = item['category']?.toString() ?? '';
+
+    if (category == 'Hotels') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => HotelDetails(hotelData: item)),
+      );
+    } else if (category == 'Places') {
+      // Places (Cities) should go to Activities list, just like from Explore
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Activities(
+            cityName: item['name'],
+            cityId: item['name']?.toString().toLowerCase(),
+          ),
+        ),
+      );
+    } else if (category == 'Activities') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SpotDetails(spotData: item)),
+      );
+    } else {
+      // For items that don't have dedicated pages yet (Flights, etc)
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(item['title'] ?? 'Item Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Category: $category'),
+              const SizedBox(height: 8),
+              if (item['location'] != null)
+                Text('Location: ${item['location']}'),
+              const SizedBox(height: 8),
+              if (item['price'] != null) Text('Price: ${item['price']}'),
+              const SizedBox(height: 16),
+              const Text(
+                'Full details not available for this item type yet.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CLOSE'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

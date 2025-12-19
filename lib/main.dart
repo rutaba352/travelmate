@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:travelmate/Services/Auth/AuthServices.dart';
 import 'package:travelmate/Views/SplashScreen.dart';
 import 'package:provider/provider.dart';
@@ -11,19 +12,27 @@ import 'package:travelmate/Utilities/AppNavigator.dart';
 // But as per lint MainNavigation is unused in main.dart itself.
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    // Initialize Firebase
-    final authService = AuthService.firebase();
-    await authService.initialize();
-  } catch (e) {
-    print('Error initializing app: $e');
-    // You might want to run a simple error app here if initialization fails
-    // runApp(ErrorApp(error: e.toString()));
-  }
+      try {
+        // Initialize Firebase
+        final authService = AuthService.firebase();
+        await authService.initialize();
+      } catch (e) {
+        print('Error initializing app: $e');
+        // You might want to run a simple error app here if initialization fails
+        // runApp(ErrorApp(error: e.toString()));
+      }
 
-  runApp(const TravelMate());
+      runApp(const TravelMate());
+    },
+    (error, stack) {
+      print('Caught error: $error');
+      print(stack);
+    },
+  );
 }
 
 class TravelMate extends StatelessWidget {

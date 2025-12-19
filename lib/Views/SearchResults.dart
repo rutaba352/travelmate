@@ -722,6 +722,7 @@ class _SearchResultsState extends State<SearchResults> {
                       onPressed: () => _bookItem(hotel, 'hotel'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00897B),
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
